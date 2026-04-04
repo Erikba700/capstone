@@ -1,0 +1,13 @@
+### IntelliJ IDEA ###
+/.idea/
+__pycache__/
+
+### Packages ###
+/.venv/
+/*.egg-info/
+.python-version
+.coverage
+/htmlcov/
+
+### lockal files ###
+.env

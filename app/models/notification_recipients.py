@@ -1,0 +1,23 @@
+import uuid
+
+import sqlalchemy as sa
+from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models import DomainSqlModel
+
+
+class NotificationRecipients(DomainSqlModel):
+    __tablename__ = "notification_recipients"
+
+    reminder_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("reminders.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("users.id", ondelete="CASCADE"))
+
+    message: Mapped[str] = mapped_column(sa.String, nullable=True)
+
+    sent_at: Mapped[datetime] = mapped_column(sa.DateTime, nullable=True)
+    is_read: Mapped[bool] = mapped_column(default=False, nullable=False)
+
+    # Relationships
+    reminder = relationship("Reminders", back_populates="notifications")
+    user = relationship("Users", back_populates="notifications")

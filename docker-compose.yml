@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+  app_capstone:
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    ports:
+      - '8000:8000'
+    networks:
+      - mp_net
+    volumes:
+      - ./app_capstone:/project/app:r
+      - ./migrations_capstone:/project/migrations:r
+    environment:
+      PGSQL_HOST: postgres
+      PGSQL_PORT: 5432
+      PGSQL_USER: postgres
+      PGSQL_PASSWORD: postgres
+      PGSQL_DB_NAME: postgres_capstone
+
+  postgres_capstone:
+    image: 'postgres:17'
+    ports:
+      - '5432:5432'
+    networks:
+      - mp_net
+    volumes:
+      - postgres_data_capstone:/var/lib/postgresql:rw
+    environment:
+      POSTGRES_DB: postgres_capstone
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/17/docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+networks:
+  mp_net:
+    driver: bridge
+
+volumes:
+  postgres_data_capstone:

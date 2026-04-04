@@ -1,0 +1,99 @@
+[project]
+name = "capstone"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiocache>=0.12.3",
+    "alembic>=1.17,<2",
+    "asyncpg>=0.31.0",
+    "boto3>=1.42.18",
+    "fastapi>=0.125.0",
+    "greenlet>=3.3.0",
+    "httptools>=0.7.1",
+    "httpx>=0.28.1",
+    "msal>=1.34.0",
+    "nh3>=0.3.2",
+    "orjson>=3.11.5",
+    "psycopg>=3.3.2",
+    "pydantic-settings>=2.12.0",
+    "python-jose>=3.5.0",
+    "pydantic-settings[aws-secrets-manager]>=2.12.0",
+    "sqlalchemy>=2.0.45",
+    "structlog>=25.5.0",
+    "uvicorn>=0.38.0",
+    "uvloop>=0.22.1",
+    "types-boto3[s3]>=1.42.36",
+    "truststore>=0.10.4",
+    "passlib>=1.7.4",
+    "bcrypt<=4.1",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "psycopg[binary,pool]>=3.3.2",
+    "rich>=14.2.0",
+    "ruff==0.14.9",
+]
+
+[tool.ruff]
+line-length = 89
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+select = [
+    "ANN",    # flake8-annotations
+    "ASYNC",  # flake8-async
+    "B",      # flake8-bugbear
+    "C90",    # mccabe
+    "D",      # pydocstyle
+    "DTZ",    # flake8-datetimez
+    "E",      # pycodestyle
+    "EM",     # flake8-errmsg
+    "F",      # Pyflakes
+    "FAST",   # FastAPI
+    "FBT",    # flake8-boolean-trap
+    "FURB",   # refurb
+    "G",      # flake8-logging-format
+    "I",      # isort
+    "LOG",    # flake8-logging
+    "N",      # pep8-naming
+    "PERF",   # perflint
+    "PT",     # flake8-pytest-style
+    "PTH",    # flake8-use-pathlib
+    "RUF",    # Ruff-specific rules
+    "S",      # flake8-bandit
+    "SIM",    # flake8-simplify
+    "UP",     # pyupgrade
+    "W",      # pycodestyle
+]
+ignore = [
+    "D100",   # undocumented-public-module
+    "D104",   # undocumented-public-package
+    "D107",   # undocumented-public-init
+    "G004",   # allow f-strings in logging
+    "ANN401", # any-type
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/{tests,docs}/*" = [
+    "ANN201", # missing-return-type-undocumented-public-function
+    "ANN202", # missing-return-type-private-function
+    "S101",   # assert
+    "D103",   # undocumented-public-function
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+force-single-line = false
+
+[tool.mypy]
+strict = false
+python_version = "3.14"
+packages = ["app", "tests"]
