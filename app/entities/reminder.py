@@ -1,5 +1,5 @@
 import uuid
-from typing import Self, Any
+from typing import Any, Self
 
 from app.entities import DomainEntity
 
@@ -14,11 +14,12 @@ class ReminderEntity(DomainEntity):
 
     @classmethod
     def create_new(
-            cls,
-            title: str,
-            description: str | None,
-            owner_id: uuid.UUID,
-            is_completed: bool = False,
+        cls,
+        title: str,
+        description: str | None,
+        owner_id: uuid.UUID,
+        *,
+        is_completed: bool = False,
     ) -> Self:
         """Construct new reminder."""
         id_ = cls.generate_id()

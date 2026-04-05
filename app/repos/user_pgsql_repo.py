@@ -1,11 +1,10 @@
-import uuid
-
 import structlog
 from sqlalchemy import exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Insert, Select, Update
 
 from app.entities import UserEntity
+from app.exceptions import BadRequestError, CreateObjectError
 from app.models import Users
 
 logger = structlog.getLogger(__name__)
@@ -15,9 +14,9 @@ class UserPgsqlQueries:
     """Space for user PostgreSQL queries."""
 
     @staticmethod
-    def select_user_by_oid_query(oid: uuid.UUID) -> Select:
-        """Select user by oid."""
-        return select(Users).where(Users.id == oid)
+    def select_user_by_email_query(email: str) -> Select:
+        """Select user by email."""
+        return select(Users).where(Users.email == email)
 
     @staticmethod
     def check_user_exists_query(email: str) -> Select:
@@ -51,7 +50,7 @@ class UserPgsqlRepo:
         self.session = session
         self.queries = queries
 
-    async def email_exists(self, email: uuid.UUID) -> bool:
+    async def email_exists(self, email: str) -> bool:
         """Check if a user with the given oid exists."""
         query = self.queries.check_user_exists_query(email=email)
         res = await self.session.scalar(query)
@@ -60,15 +59,15 @@ class UserPgsqlRepo:
 
         return bool(res)
 
-    async def find_by_id(
+    async def find_by_username(
         self,
-        oid: uuid.UUID,
+        email: str,
     ) -> UserEntity | None:
         """Find user or return None."""
-        query = self.queries.select_user_by_oid_query(oid=oid)
+        query = self.queries.select_user_by_email_query(email=email)
         instance = await self.session.scalar(query)
 
-        logger.info(f'Found user for oid={oid}: {instance is not None}')
+        logger.info(f'Found user for oid={email}: {instance is not None}')
 
         if instance is not None:
             return UserEntity.model_validate(instance)
@@ -79,15 +78,12 @@ class UserPgsqlRepo:
         """Insert user to db."""
         data = entity.model_dump(include=Users.get_model_fields())
         query = self.queries.insert_user_query(user_data=data)
-        result = await self.session.execute(query)
-        instance = result.scalar_one_or_none()
-        print(f"asdfasdf {instance}")
+        instance = await self.session.scalar(query)
 
         if instance is None:
-            # If no row was returned, something went wrong with insertion —
-            # raise an error to make the failure visible to the caller.
             logger.error('Insert returned no instance', id=entity.id)
-            raise RuntimeError('Failed to insert user')
+            msg = 'Failed to insert user'
+            raise CreateObjectError(msg)
 
         logger.info(f'Inserted user with id={entity.id}')
 
@@ -97,12 +93,12 @@ class UserPgsqlRepo:
         """Update user in db."""
         data = entity.model_dump(include=Users.get_model_fields())
         query = self.queries.update_user_query(user_data=data)
-        result = await self.session.execute(query)
-        instance = result.scalar_one_or_none()
+        instance = await self.session.scalar(query)
 
         if instance is None:
             logger.error('Update returned no instance', id=entity.id)
-            raise RuntimeError('Failed to update user')
+            msg = 'Failed to update user'
+            raise BadRequestError(msg)
 
         logger.info(f'Updated user with oid={entity.id}')
 

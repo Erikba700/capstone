@@ -15,7 +15,7 @@
 #         nullable=False,
 #         comment='Name',
 #     )
-#     owner_id: Mapped[int] = mapped_column(sa.ForeignKey("users.id"), ondelete="SET NULL")
+#     owner_id: Mapped[int] = mapped_column(sa.ForeignKey("users.id"), ondelete="SET NULL") #noqa: E501
 #     hashed_password: Mapped[str] = mapped_column(
 #         sa.VARCHAR(255),
 #         nullable=False,

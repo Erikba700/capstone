@@ -11,8 +11,8 @@ from fastapi.responses import ORJSONResponse
 
 from app.api import (
     debug,
-    users,
     root,
+    users,
 )
 from app.config import settings
 from app.db.async_pgsql_pool import AsyncPostgresPool

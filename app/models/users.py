@@ -29,5 +29,5 @@ class Users(DomainSqlModel):
     )
 
     # groups = relationship("GroupMembers", back_populates="user")
-    owned_reminders = relationship("Reminders", back_populates="owner")
-    notifications = relationship("NotificationRecipients", back_populates="user")
+    owned_reminders = relationship('Reminders', back_populates='owner')
+    notifications = relationship('NotificationRecipients', back_populates='user')

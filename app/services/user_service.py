@@ -1,12 +1,5 @@
-import uuid
-from typing import Annotated
-
 import structlog
-from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.sql.functions import user
 
-from app import services
 from app.entities import UserEntity
 from app.exceptions import NotFoundError
 from app.repos import RepoFactory
@@ -28,9 +21,9 @@ class UserService:
         exists = await self.repos.user_pgsql_repo.email_exists(email=email)
         return exists
 
-    async def fetch(self, oid: uuid.UUID) -> UserEntity | None:
-        """Check if a user with the given oid exists."""
-        user = await self.repos.user_pgsql_repo.find_by_id(oid=oid)
+    async def fetch_user_by_email(self, email: str) -> UserEntity:
+        """Check if a user with the given email."""
+        user = await self.repos.user_pgsql_repo.find_by_username(email=email)
         if user is None:
             raise NotFoundError()
         return user
@@ -44,23 +37,3 @@ class UserService:
         """Update an existing user."""
         user = await self.repos.user_pgsql_repo.update(entity=entity)
         return user
-
-    async def authenticate(
-        self,
-        credentials: Annotated[
-            HTTPAuthorizationCredentials, Depends(HTTPBearer())
-        ],
-    ) -> UserEntity:
-        """Validate Bearer token and save user if not exists."""
-        # user_payload = await self.validate_token(token=credentials.credentials)
-        user_jwt_token = '7ead9d01-c2d8-489e-baf9-56df2cb13073'
-
-        user_service = services.UserService(
-            repos=self.repos,
-        )
-        user_entity = await user_service.fetch(
-            oid=user_jwt_token,
-        )
-
-        return user_entity
-

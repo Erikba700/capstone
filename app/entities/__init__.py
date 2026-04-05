@@ -1,9 +1,9 @@
 from .domain_entity import DomainEntity
-from .user import UserEntity
 from .notification import NotificationEntity
+from .user import UserEntity
 
 __all__ = [
     'DomainEntity',
-    'UserEntity',
     'NotificationEntity',
+    'UserEntity',
 ]

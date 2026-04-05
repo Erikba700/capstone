@@ -1,13 +1,13 @@
 from .base import DomainSqlModel, SqlModel, metadata
-from .users import Users
-from .reminder import Reminders
 from .notification_recipients import NotificationRecipients
+from .reminder import Reminders
+from .users import Users
 
 __all__ = [
-    'SqlModel',
     'DomainSqlModel',
+    'NotificationRecipients',
+    'Reminders',
+    'SqlModel',
     'Users',
     'metadata',
-    'Reminders',
-    'NotificationRecipients',
 ]

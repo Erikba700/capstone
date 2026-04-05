@@ -1,6 +1,6 @@
-from datetime import datetime
 import uuid
-from typing import Self, Any
+from datetime import datetime
+from typing import Any, Self
 
 from app.entities.domain_entity import DomainEntity
 
@@ -38,7 +38,10 @@ class NotificationEntity(DomainEntity):
             updated_at=now,
         )
 
-    def update(self, payload: dict[str, Any],):
+    def update(
+        self,
+        payload: dict[str, Any],
+    ) -> Self:
         """Update current notification with new data from payload."""
         now = self.generate_current_timestamp()
 

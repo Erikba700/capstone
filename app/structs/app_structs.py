@@ -1,5 +1,4 @@
-
-from pydantic import UUID4, BaseModel, computed_field, field_validator
+from pydantic import BaseModel, computed_field
 
 from app.utils import get_utc_now
 
@@ -22,5 +21,3 @@ class AppInfoEntity(BaseModel):
     """Entity for application info."""
 
     build: BuildInfo
-
-

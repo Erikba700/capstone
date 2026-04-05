@@ -18,7 +18,6 @@ class RepoFactory:
         return UserPgsqlRepo(self.pgsql_session)
 
 
-
 __all__ = [
     'RepoFactory',
     'UserPgsqlRepo',

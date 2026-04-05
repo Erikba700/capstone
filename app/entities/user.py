@@ -12,7 +12,6 @@ class UserEntity(DomainEntity):
     email: str
     hashed_password: str
 
-
     @classmethod
     def create_new(
         cls,

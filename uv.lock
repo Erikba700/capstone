@@ -225,10 +225,12 @@ dependencies = [
     { name = "psycopg" },
     { name = "pydantic-settings", extra = ["aws-secrets-manager"] },
     { name = "python-jose" },
+    { name = "python-multipart" },
     { name = "sqlalchemy" },
     { name = "structlog" },
     { name = "truststore" },
     { name = "types-boto3", extra = ["s3"] },
+    { name = "types-passlib" },
     { name = "uvicorn" },
     { name = "uvloop" },
 ]
@@ -260,10 +262,12 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.12.0" },
     { name = "pydantic-settings", extras = ["aws-secrets-manager"], specifier = ">=2.12.0" },
     { name = "python-jose", specifier = ">=3.5.0" },
+    { name = "python-multipart", specifier = ">=0.0.22" },
     { name = "sqlalchemy", specifier = ">=2.0.45" },
     { name = "structlog", specifier = ">=25.5.0" },
     { name = "truststore", specifier = ">=0.10.4" },
     { name = "types-boto3", extras = ["s3"], specifier = ">=1.42.36" },
+    { name = "types-passlib", specifier = ">=1.7.7.20260211" },
     { name = "uvicorn", specifier = ">=0.38.0" },
     { name = "uvloop", specifier = ">=0.22.1" },
 ]
@@ -1480,6 +1484,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-multipart"
+version = "0.0.22"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/01/979e98d542a70714b0cb2b6728ed0b7c46792b695e3eaec3e20711271ca3/python_multipart-0.0.22.tar.gz", hash = "sha256:7340bef99a7e0032613f56dc36027b959fd3b30a787ed62d310e951f7c3a3a58", size = 37612, upload-time = "2026-01-25T10:15:56.219Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/d0/397f9626e711ff749a95d96b7af99b9c566a9bb5129b8e4c10fc4d100304/python_multipart-0.0.22-py3-none-any.whl", hash = "sha256:2b2cd894c83d21bf49d702499531c7bafd057d730c201782048f7945d82de155", size = 24579, upload-time = "2026-01-25T10:15:54.811Z" },
+]
+
+[[package]]
 name = "requests"
 version = "2.32.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1752,6 +1765,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/68/37/d4f244de0156daf25484dd3a06bb637edf9357b5169a4d7c672d3c7705be/types_boto3_s3-1.42.67.tar.gz", hash = "sha256:5fd229e1ee0925a853a1e0ba53908899e25243147c364a5e2615d0a13a898c41", size = 76230, upload-time = "2026-03-12T20:02:14.615Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/85/cc/c95884f5a5049b4b53de9de6bcc921871d1b11b8fa073f17f7f98aec398c/types_boto3_s3-1.42.67-py3-none-any.whl", hash = "sha256:beef586290dee0913961fe665997480e912b4acc62ac931afe4a44214c2d4400", size = 83383, upload-time = "2026-03-12T20:02:11.41Z" },
+]
+
+[[package]]
+name = "types-passlib"
+version = "1.7.7.20260211"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/f4/718ff8cbef9366e597aefd58929321702d3e183998cea89949ab5423281f/types_passlib-1.7.7.20260211.tar.gz", hash = "sha256:af73afffe1ce94c95c7f6072bd261572c29845de74fdffa3a265fc7634bca056", size = 25666, upload-time = "2026-02-10T15:11:59.517Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/6a/e9fc6a5b8f9a380a4a56b9f1e4dba5c6899561868017b17f6de382808b6f/types_passlib-1.7.7.20260211-py3-none-any.whl", hash = "sha256:c0f1ad440c513a6c07f333b28249530686056fd54a7b3ac6128ae31fd46305d3", size = 40457, upload-time = "2026-02-10T15:11:58.647Z" },
 ]
 
 [[package]]

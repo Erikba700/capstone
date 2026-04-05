@@ -20,9 +20,7 @@ async def transaction_context(
     # the same transactional scope. The transaction will be committed
     # if the block exits normally or rolled back on exception.
     async with AsyncExitStack() as stack:
-        pgsql_session = await stack.enter_async_context(
-            pgsql_pool.get_session()
-        )
+        pgsql_session = await stack.enter_async_context(pgsql_pool.get_session())
 
         # Enter the transaction context manager so commit/rollback is
         # handled around the yielded session.

@@ -1,10 +1,8 @@
-import os
-import tomllib
 from pathlib import Path
 
-from pydantic import Field, PositiveInt
+import tomllib
+from pydantic import Field
 from pydantic_settings import (
-    AWSSecretsManagerSettingsSource,
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
@@ -67,6 +65,11 @@ class Settings(BaseSettings):
     app_version: str = get_app_version()
     app_name: str = Field(default='Capstone API')
 
+    access_token_expire_minutes: int = Field(default=15)
+    refresh_token_expire_minutes: int = Field(default=60 * 24 * 7)  # 7 days
+    algorithm: str = Field(default='HS256')
+    jwt_secret_key: str = Field(default='')
+    jwt_refresh_secret_key: str = Field(default='')
 
 
 settings = Settings()  # type: ignore

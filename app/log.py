@@ -38,9 +38,7 @@ class LoggingManager:
         self.level = level
         self.sqlalchemy_level = sqlalchemy_level
 
-        self.timestamper = structlog.processors.TimeStamper(
-            fmt='iso', utc=True
-        )
+        self.timestamper = structlog.processors.TimeStamper(fmt='iso', utc=True)
         self.callsite_adder = structlog.processors.CallsiteParameterAdder(
             {
                 structlog.processors.CallsiteParameter.PATHNAME,
@@ -108,9 +106,7 @@ class LoggingManager:
             structlog.processors.add_log_level,
             self.timestamper,
         ]
-        logger_factory: (
-            structlog.WriteLoggerFactory | structlog.BytesLoggerFactory
-        )
+        logger_factory: structlog.WriteLoggerFactory | structlog.BytesLoggerFactory
         if self.renderer == 'json':
             processors += [
                 self.callsite_adder,

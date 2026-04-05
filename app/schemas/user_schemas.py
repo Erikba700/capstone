@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import Field, AwareDatetime
+from pydantic import AwareDatetime
 
 from app.schemas.base_schemas import BaseSchema
 
@@ -15,6 +15,7 @@ class UserSignUpResponseSchema(BaseSchema):
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
+
 class UserSignUpRequestSchema(BaseSchema):
     """User schema for sing up request."""
 
@@ -22,23 +23,16 @@ class UserSignUpRequestSchema(BaseSchema):
     email: str
     password: str
 
-class UserResponseSchema(BaseSchema):
-    """User response schema for getting user."""
 
-    id: uuid.UUID
-    name: str
-    sid: str | None
+class UserLoginResponseSchema(BaseSchema):
+    """User response schema for token fields."""
 
-
-class UserSearchResponseSchema(BaseSchema):
-    """User schema for user search."""
-
-    id: uuid.UUID
-    name: str
+    access_token: str
+    refresh_token: str
 
 
-class UserSearchSchema(BaseSchema):
-    """Schema for user search parameters."""
+class TokenPayloadSchema(BaseSchema):
+    """Token payload schema for token validation."""
 
-    substring: str = Field(..., description='Name substring to search')
-    size: int = Field(20, ge=1, le=1_000, description='Max number of results')
+    sub: str
+    exp: int
