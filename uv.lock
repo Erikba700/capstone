@@ -231,6 +231,7 @@ dependencies = [
     { name = "truststore" },
     { name = "types-boto3", extra = ["s3"] },
     { name = "types-passlib" },
+    { name = "types-python-jose" },
     { name = "uvicorn" },
     { name = "uvloop" },
 ]
@@ -268,6 +269,7 @@ requires-dist = [
     { name = "truststore", specifier = ">=0.10.4" },
     { name = "types-boto3", extras = ["s3"], specifier = ">=1.42.36" },
     { name = "types-passlib", specifier = ">=1.7.7.20260211" },
+    { name = "types-python-jose", specifier = ">=3.5.0.20260402" },
     { name = "uvicorn", specifier = ">=0.38.0" },
     { name = "uvloop", specifier = ">=0.22.1" },
 ]
@@ -1774,6 +1776,27 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b5/f4/718ff8cbef9366e597aefd58929321702d3e183998cea89949ab5423281f/types_passlib-1.7.7.20260211.tar.gz", hash = "sha256:af73afffe1ce94c95c7f6072bd261572c29845de74fdffa3a265fc7634bca056", size = 25666, upload-time = "2026-02-10T15:11:59.517Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/6a/e9fc6a5b8f9a380a4a56b9f1e4dba5c6899561868017b17f6de382808b6f/types_passlib-1.7.7.20260211-py3-none-any.whl", hash = "sha256:c0f1ad440c513a6c07f333b28249530686056fd54a7b3ac6128ae31fd46305d3", size = 40457, upload-time = "2026-02-10T15:11:58.647Z" },
+]
+
+[[package]]
+name = "types-pyasn1"
+version = "0.6.0.20260402"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/6e/f3a09aa02cc109b6b2f38c7490530d4731d642728aed15ed547161a339f3/types_pyasn1-0.6.0.20260402.tar.gz", hash = "sha256:28bceaa3214e22f5a3eb209f7fc9ad709708867bea2e818266598b14c2a30a92", size = 17269, upload-time = "2026-04-02T04:17:29.441Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ae/3f/e557c973a8dfbaf8fcb93f306684fff39c53e578a1120d36ea5a9859fe9c/types_pyasn1-0.6.0.20260402-py3-none-any.whl", hash = "sha256:dc5db493d2c16be28fc8613e22eaaa113623274ea0110a3778dd633e32ec1b90", size = 24044, upload-time = "2026-04-02T04:17:28.529Z" },
+]
+
+[[package]]
+name = "types-python-jose"
+version = "3.5.0.20260402"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-pyasn1" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/95/98c685395422203cf6f967c90568e91916afdba8edb2b19e31bb472dc8c5/types_python_jose-3.5.0.20260402.tar.gz", hash = "sha256:2ee7c7dc77071b09e774b7367f32667a4ecbd4b26b9f22daac67ba1e74ba85ef", size = 11957, upload-time = "2026-04-02T04:19:33.521Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/07/fbe905a1fe8680ab29a47bf3f58469062d99b813b0985edf0063a5ec192b/types_python_jose-3.5.0.20260402-py3-none-any.whl", hash = "sha256:81b411a300edbaa8a0589a493bc9f1e6d0e0d289094d6f55f5daf1f1dcbb4bae", size = 14693, upload-time = "2026-04-02T04:19:32.661Z" },
 ]
 
 [[package]]

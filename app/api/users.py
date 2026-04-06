@@ -83,6 +83,6 @@ async def login(
         raise BadRequestError(msg) from None
 
     return {
-        'access_token': create_access_token(user.email),
-        'refresh_token': create_refresh_token(user.email),
+        'access_token': create_access_token(user.id),
+        'refresh_token': create_refresh_token(user.id),
     }

@@ -1,3 +1,5 @@
+import uuid
+
 import structlog
 from sqlalchemy import exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +19,11 @@ class UserPgsqlQueries:
     def select_user_by_email_query(email: str) -> Select:
         """Select user by email."""
         return select(Users).where(Users.email == email)
+
+    @staticmethod
+    def select_user_by_id_query(user_id: uuid.UUID) -> Select:
+        """Select user by id."""
+        return select(Users).where(Users.id == user_id)
 
     @staticmethod
     def check_user_exists_query(email: str) -> Select:
@@ -51,7 +58,7 @@ class UserPgsqlRepo:
         self.queries = queries
 
     async def email_exists(self, email: str) -> bool:
-        """Check if a user with the given oid exists."""
+        """Check if a user with the given email exists."""
         query = self.queries.check_user_exists_query(email=email)
         res = await self.session.scalar(query)
 
@@ -67,7 +74,22 @@ class UserPgsqlRepo:
         query = self.queries.select_user_by_email_query(email=email)
         instance = await self.session.scalar(query)
 
-        logger.info(f'Found user for oid={email}: {instance is not None}')
+        logger.info(f'Found user for email={email}: {instance is not None}')
+
+        if instance is not None:
+            return UserEntity.model_validate(instance)
+
+        return None
+
+    async def find_by_id(
+        self,
+        user_id: uuid.UUID,
+    ) -> UserEntity | None:
+        """Find user or return None."""
+        query = self.queries.select_user_by_id_query(user_id=user_id)
+        instance = await self.session.scalar(query)
+
+        logger.info(f'Found user for id={user_id}: {instance is not None}')
 
         if instance is not None:
             return UserEntity.model_validate(instance)

@@ -1,3 +1,5 @@
+import uuid
+
 import structlog
 
 from app.entities import UserEntity
@@ -24,6 +26,13 @@ class UserService:
     async def fetch_user_by_email(self, email: str) -> UserEntity:
         """Check if a user with the given email."""
         user = await self.repos.user_pgsql_repo.find_by_username(email=email)
+        if user is None:
+            raise NotFoundError()
+        return user
+
+    async def fetch_user_by_id(self, user_id: uuid.UUID) -> UserEntity:
+        """Check if a user with the given email."""
+        user = await self.repos.user_pgsql_repo.find_by_id(user_id=user_id)
         if user is None:
             raise NotFoundError()
         return user

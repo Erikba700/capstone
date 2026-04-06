@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Annotated
@@ -67,6 +68,6 @@ async def get_current_user(
             headers={'WWW-Authenticate': 'Bearer'},
         ) from None
     service = services.UserService(repos=repos)
-    user = await service.fetch_user_by_email(token_data.sub)
+    user = await service.fetch_user_by_id(uuid.UUID(token_data.sub))
 
     return user

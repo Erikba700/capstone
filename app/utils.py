@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -41,7 +42,7 @@ def verify_password(password: str, hashed_pass: str) -> bool:
 
 
 def create_access_token(
-    subject: str,
+    subject: uuid.UUID,
 ) -> str:
     """Create access token."""
     expires_delta = get_utc_now() + timedelta(
@@ -54,7 +55,7 @@ def create_access_token(
 
 
 def create_refresh_token(
-    subject: str,
+    subject: uuid.UUID,
 ) -> str:
     """Create refresh token."""
     expires_delta = get_utc_now() + timedelta(

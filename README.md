@@ -221,7 +221,7 @@ What happens:
 
 👤 3️⃣ USER ENDPOINTS (Dependency for auth)
 
-✅ Get Current User (Not sure how to do it as dependency, will check in our project)
+✅ Get Current User
 What happens:
 1. Extract user_id from JWT
 2. Return user info

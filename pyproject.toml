@@ -30,6 +30,7 @@ dependencies = [
     "bcrypt<=4.1",
     "python-multipart>=0.0.22",
     "types-passlib>=1.7.7.20260211",
+    "types-python-jose>=3.5.0.20260402",
 ]
 
 [dependency-groups]

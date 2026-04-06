@@ -9,7 +9,7 @@ class ReminderEntity(DomainEntity):
 
     title: str
     description: str | None
-    owner_id: str
+    owner_id: uuid.UUID
     is_completed: bool
 
     @classmethod
@@ -30,7 +30,7 @@ class ReminderEntity(DomainEntity):
             updated_at=now,
             title=title,
             description=description,
-            owner_id=str(owner_id),
+            owner_id=owner_id,
             is_completed=is_completed,
         )
 

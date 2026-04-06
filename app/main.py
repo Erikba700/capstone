@@ -11,6 +11,7 @@ from fastapi.responses import ORJSONResponse
 
 from app.api import (
     debug,
+    reminders,
     root,
     users,
 )
@@ -150,14 +151,7 @@ class FastApiAbstractFactory:
         api_router = fastapi.APIRouter()
         api_router.include_router(router=root.router)
         api_router.include_router(router=users.router)
-
-        # api_v1_router = fastapi.APIRouter(
-        #     prefix='/v1',
-        #     dependencies=[
-        #         fastapi.Depends(fastapi.security.HTTPBearer()),
-        #         fastapi.Depends(get_authenticated_user),
-        #     ],
-        # )
+        api_router.include_router(router=reminders.router)
 
         # useful for easy debug
         if self.debug:
