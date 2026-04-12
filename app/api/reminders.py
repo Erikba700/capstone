@@ -3,13 +3,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.dependencies import (
+    get_current_user,
+    get_repo,
     get_shared_tx_repo,
 )
+from app.entities import UserEntity
 from app.entities.reminder import ReminderEntity
 from app.repos import RepoFactory
 from app.schemas.reminder_schemas import (
     RemindersCreateRequestSchema,
-    RemindersCreateResponseSchema,
+    RemindersFiltersSchema,
+    RemindersListResponseSchema,
+    RemindersResponseSchema,
 )
 from app.services.reminder_service import ReminderService
 
@@ -19,19 +24,20 @@ router = APIRouter(tags=['Reminders'])
 @router.post(
     '/reminders',
     summary='Create new reminder',
-    response_model=RemindersCreateResponseSchema,
+    response_model=RemindersResponseSchema,
 )
 async def create_reminder(
+    user: Annotated[UserEntity, Depends(get_current_user)],
     schema: RemindersCreateRequestSchema,
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
 ) -> ReminderEntity:
     """Create new reminder."""
     service = ReminderService(repos=repos)
-    # Build entity and persist
+
     reminder_entity = ReminderEntity.create_new(
         title=schema.title,
         description=schema.description,
-        owner_id=schema.owner_id,
+        owner_id=user.id,
         is_completed=schema.is_completed,
     )
 
@@ -39,13 +45,21 @@ async def create_reminder(
     return created_reminder
 
 
-# @router.get('/user', response_model=UserEntity)
-# async def get_authenticated_user(
-#     user: Annotated[UserEntity, Depends(get_current_user)],
-# ) -> UserEntity:
-#     """Get user data."""
-#     return user
-#
+@router.post('/reminders/search', response_model=RemindersListResponseSchema)
+async def get_reminders(
+    filters: RemindersFiltersSchema,
+    user: Annotated[UserEntity, Depends(get_current_user)],
+    repos: Annotated[RepoFactory, Depends(get_repo)],
+) -> dict[str, list[ReminderEntity]]:
+    """Get all reminders for a user."""
+    service = ReminderService(repos=repos)
+    reminders = await service.get_reminders_by_owner_id(
+        owner_id=user.id,
+        filters=filters,
+    )
+    return {'reminders': reminders}
+
+
 #
 # @router.post(
 #     '/login',

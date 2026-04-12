@@ -10,11 +10,10 @@ class RemindersCreateRequestSchema(BaseSchema):
 
     title: str
     description: str | None = None
-    owner_id: uuid.UUID
     is_completed: bool = False
 
 
-class RemindersCreateResponseSchema(BaseSchema):
+class RemindersResponseSchema(BaseSchema):
     """Schema for response after creating a new reminder."""
 
     id: uuid.UUID
@@ -24,3 +23,15 @@ class RemindersCreateResponseSchema(BaseSchema):
     is_completed: bool = False
     created_at: AwareDatetime
     updated_at: AwareDatetime
+
+
+class RemindersListResponseSchema(BaseSchema):
+    """Schema for response when listing reminders."""
+
+    reminders: list[RemindersResponseSchema]
+
+
+class RemindersFiltersSchema(BaseSchema):
+    """Schema for filtering reminders."""
+
+    is_completed: bool | None = None

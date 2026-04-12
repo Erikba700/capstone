@@ -34,6 +34,26 @@ class ReminderPgsqlQueries:
             .returning(Reminders)
         )
 
+    @staticmethod
+    def select_reminders_by_owner_id_query(
+        owner_id: uuid.UUID,
+        filters: dict,
+    ) -> Select:
+        """Select reminders by owner id."""
+        query = select(Reminders).where(Reminders.owner_id == owner_id)
+
+        for filter_name, filter_value in filters.items():
+            column = getattr(Reminders, filter_name)
+            query = query.where(
+                column.is_(filter_value)
+                if isinstance(filter_value, bool)
+                else column == filter_value
+            )
+
+        query = query.order_by(Reminders.created_at.desc())
+
+        return query
+
 
 class ReminderPgsqlRepo:
     """Postgres persistence for reminders."""
@@ -76,3 +96,24 @@ class ReminderPgsqlRepo:
 
         logger.info('Inserted reminder', id=entity.id)
         return ReminderEntity.model_validate(instance)
+
+    async def fetch_reminders_by_owner_id(
+        self,
+        owner_id: uuid.UUID,
+        filters: dict,
+    ) -> list[ReminderEntity]:
+        """Fetch reminders by owner id."""
+        query = self.queries.select_reminders_by_owner_id_query(
+            owner_id=owner_id,
+            filters=filters,
+        )
+        result = await self.session.execute(query)
+        instances = result.scalars().all()
+
+        logger.info(
+            'Fetched reminders by owner id',
+            owner_id=owner_id,
+            count=len(instances),
+        )
+
+        return [ReminderEntity.model_validate(instance) for instance in instances]

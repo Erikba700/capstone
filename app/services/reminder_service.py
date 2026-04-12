@@ -5,6 +5,7 @@ import structlog
 from app.entities.reminder import ReminderEntity
 from app.exceptions import BadRequestError
 from app.repos import RepoFactory
+from app.schemas.reminder_schemas import RemindersFiltersSchema
 
 logger = structlog.getLogger(__name__)
 
@@ -33,3 +34,16 @@ class ReminderService:
 
         reminder = await self.repos.reminder_pgsql_repo.insert(entity=entity)
         return reminder
+
+    async def get_reminders_by_owner_id(
+        self,
+        owner_id: uuid.UUID,
+        filters: RemindersFiltersSchema,
+    ) -> list[ReminderEntity]:
+        """Fetch reminders by owner id."""
+        reminders_dict = filters.model_dump(exclude_none=True)
+        reminders = await self.repos.reminder_pgsql_repo.fetch_reminders_by_owner_id(
+            owner_id=owner_id,
+            filters=reminders_dict,
+        )
+        return reminders
