@@ -1,6 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.models import Reminders
 from app.models.base import DomainSqlModel
 
 
@@ -29,5 +30,9 @@ class Users(DomainSqlModel):
     )
 
     # groups = relationship("GroupMembers", back_populates="user")
-    owned_reminders = relationship('Reminders', back_populates='owner')
+    owned_reminders = relationship(
+        'Reminders',
+        back_populates='owner',
+        foreign_keys=[Reminders.owner_id],
+    )
     notifications = relationship('NotificationRecipients', back_populates='user')

@@ -2,10 +2,12 @@ import uuid
 
 import structlog
 from sqlalchemy import insert, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Insert, Select, Update
 
 from app.entities.reminder import ReminderEntity
+from app.exceptions import NotFoundError
 from app.models import Reminders
 
 logger = structlog.getLogger(__name__)
@@ -117,6 +119,22 @@ class ReminderPgsqlRepo:
         )
 
         return [ReminderEntity.model_validate(instance) for instance in instances]
+
+    async def update(self, entity: ReminderEntity) -> ReminderEntity:
+        """Update a reminder."""
+        data = entity.model_dump(include=Reminders.get_model_fields())
+        query = self.queries.update_reminder_query(reminder_data=data)
+
+        try:
+            result = await self.session.execute(query)
+            instance = result.scalar_one_or_none()
+        except IntegrityError as e:
+            msg = 'Related object not found'
+            raise NotFoundError(msg) from e
+
+        logger.info('Updated reminder', id=entity.id)
+
+        return ReminderEntity.model_validate(instance)
 
     async def delete_by_id(self, reminder_id: uuid.UUID) -> None:
         """Delete a reminder by its id."""

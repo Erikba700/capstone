@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Self
 
-from app.entities import DomainEntity
+from app.entities import DomainEntity, UserEntity
 
 
 class ReminderEntity(DomainEntity):
@@ -11,6 +11,8 @@ class ReminderEntity(DomainEntity):
     description: str | None
     owner_id: uuid.UUID
     is_completed: bool
+    updated_by: uuid.UUID | None = None
+    completed_by: uuid.UUID | None = None
 
     @classmethod
     def create_new(
@@ -34,12 +36,14 @@ class ReminderEntity(DomainEntity):
             is_completed=is_completed,
         )
 
-    def update(self, payload: dict[str, Any]) -> Self:
+    def update(self, payload: dict[str, Any], user: UserEntity) -> Self:
         """Update current reminder with new data from payload."""
         now = self.generate_current_timestamp()
 
         model = self.model_copy(update=payload, deep=True)
 
         model.updated_at = now
+        model.updated_by = user.id
+        model.completed_by = user.id if payload.get('is_completed') else None
 
         return model

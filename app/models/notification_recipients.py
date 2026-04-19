@@ -20,6 +20,7 @@ class NotificationRecipients(DomainSqlModel):
     )
 
     message: Mapped[str] = mapped_column(sa.String, nullable=True)
+    scheduled_time: Mapped[datetime] = mapped_column(sa.DateTime, nullable=True)
 
     sent_at: Mapped[datetime] = mapped_column(sa.DateTime, nullable=True)
     is_read: Mapped[bool] = mapped_column(default=False, nullable=False)

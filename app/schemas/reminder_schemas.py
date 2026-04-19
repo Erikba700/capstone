@@ -35,3 +35,12 @@ class RemindersFiltersSchema(BaseSchema):
     """Schema for filtering reminders."""
 
     is_completed: bool | None = None
+
+
+class RemindersUpdateRequestSchema(BaseSchema):
+    """Schema for updating a reminder."""
+
+    title: str | None = None
+    description: str | None = None
+    is_completed: bool | None = None
+    owner_id: uuid.UUID | None = None

@@ -16,6 +16,7 @@ from app.schemas.reminder_schemas import (
     RemindersFiltersSchema,
     RemindersListResponseSchema,
     RemindersResponseSchema,
+    RemindersUpdateRequestSchema,
 )
 from app.services.reminder_service import ReminderService
 
@@ -59,6 +60,25 @@ async def get_reminders(
         filters=filters,
     )
     return {'reminders': reminders}
+
+
+@router.patch('/reminders/{reminder_id}', response_model=RemindersResponseSchema)
+async def update_reminder(
+    user: Annotated[UserEntity, Depends(get_current_user)],
+    reminder_id: uuid.UUID,
+    schema: RemindersUpdateRequestSchema,
+    repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
+) -> ReminderEntity:
+    """Update a reminder by id."""
+    service = ReminderService(repos=repos)
+
+    updated_reminder = await service.update_reminder(
+        reminder_id=reminder_id,
+        schema=schema,
+        user=user,
+    )
+
+    return updated_reminder
 
 
 @router.delete('/reminders/{reminder_id}', status_code=status.HTTP_204_NO_CONTENT)

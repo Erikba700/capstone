@@ -2,10 +2,14 @@ import uuid
 
 import structlog
 
+from app.entities import UserEntity
 from app.entities.reminder import ReminderEntity
 from app.exceptions import BadRequestError
 from app.repos import RepoFactory
-from app.schemas.reminder_schemas import RemindersFiltersSchema
+from app.schemas.reminder_schemas import (
+    RemindersFiltersSchema,
+    RemindersUpdateRequestSchema,
+)
 
 logger = structlog.getLogger(__name__)
 
@@ -47,6 +51,30 @@ class ReminderService:
             filters=reminders_dict,
         )
         return reminders
+
+    async def update_reminder(
+        self,
+        schema: RemindersUpdateRequestSchema,
+        reminder_id: uuid.UUID,
+        user: UserEntity,
+    ) -> ReminderEntity:
+        """Update a reminder."""
+        reminder = await self.repos.reminder_pgsql_repo.find_by_id(
+            reminder_id=reminder_id
+        )
+        if reminder is None:
+            msg = 'Reminder not found'
+            raise BadRequestError(msg) from None
+
+        payload = schema.model_dump(exclude_none=True)
+        updated_reminder = reminder.update(
+            payload=payload,
+            user=user,
+        )
+        updated_reminder = await self.repos.reminder_pgsql_repo.update(
+            entity=updated_reminder
+        )
+        return updated_reminder
 
     async def delete_reminder_by_id(self, reminder_id: uuid.UUID) -> None:
         """Delete a reminder by id."""

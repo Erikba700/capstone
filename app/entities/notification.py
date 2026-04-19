@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime
 from typing import Any, Self
 
+from pydantic import AwareDatetime
+
 from app.entities.domain_entity import DomainEntity
 
 
@@ -11,7 +13,7 @@ class NotificationEntity(DomainEntity):
     user_id: uuid.UUID
     reminder_id: uuid.UUID
     message: str | None
-    scheduled_time: str | None
+    scheduled_time: AwareDatetime | None
     sent_at: datetime | None
     is_read: bool
 
@@ -21,7 +23,7 @@ class NotificationEntity(DomainEntity):
         user_id: uuid.UUID,
         reminder_id: uuid.UUID,
         message: str | None = None,
-        scheduled_time: str | None = None,
+        scheduled_time: AwareDatetime | None = None,
     ) -> Self:
         """Construct new notification."""
         id_ = cls.generate_id()
