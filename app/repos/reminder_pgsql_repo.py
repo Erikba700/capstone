@@ -117,3 +117,12 @@ class ReminderPgsqlRepo:
         )
 
         return [ReminderEntity.model_validate(instance) for instance in instances]
+
+    async def delete_by_id(self, reminder_id: uuid.UUID) -> None:
+        """Delete a reminder by its id."""
+        query = self.queries.select_reminder_by_reminder_id_query(
+            reminder_id=reminder_id
+        )
+        instance = await self.session.scalar(query)
+        await self.session.delete(instance)
+        logger.info('Deleted reminder', reminder=instance)

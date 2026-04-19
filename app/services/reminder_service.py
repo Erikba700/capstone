@@ -47,3 +47,13 @@ class ReminderService:
             filters=reminders_dict,
         )
         return reminders
+
+    async def delete_reminder_by_id(self, reminder_id: uuid.UUID) -> None:
+        """Delete a reminder by id."""
+        reminder = await self.repos.reminder_pgsql_repo.find_by_id(
+            reminder_id=reminder_id
+        )
+        if reminder is None:
+            msg = 'Reminder not found'
+            raise BadRequestError(msg) from None
+        await self.repos.reminder_pgsql_repo.delete_by_id(reminder_id=reminder.id)

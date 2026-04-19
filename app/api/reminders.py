@@ -1,6 +1,7 @@
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 
 from app.dependencies import (
     get_current_user,
@@ -60,29 +61,13 @@ async def get_reminders(
     return {'reminders': reminders}
 
 
-#
-# @router.post(
-#     '/login',
-#     summary='Create access and refresh tokens for user',
-#     response_model=UserLoginResponseSchema,
-# )
-# async def login(
-#     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-#     repos: Annotated[RepoFactory, Depends(get_repo)],
-# ) -> dict:
-#     """Authenticate user and return access and refresh tokens."""
-#     service = UserService(repos=repos)
-#     user = await service.fetch_user_by_email(form_data.username)
-#     if user is None:
-#         msg = 'Incorrect email or password'
-#         raise BadRequestError(msg) from None
-#
-#     hashed_pass = user.hashed_password
-#     if not verify_password(form_data.password, hashed_pass):
-#         msg = 'Incorrect email or password'
-#         raise BadRequestError(msg) from None
-#
-#     return {
-#         'access_token': create_access_token(user.id),
-#         'refresh_token': create_refresh_token(user.id),
-#     }
+@router.delete('/reminders/{reminder_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_reminder(
+    reminder_id: uuid.UUID,
+    repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
+) -> None:
+    """Delete a reminder by id."""
+    service = ReminderService(repos=repos)
+    await service.delete_reminder_by_id(
+        reminder_id=reminder_id,
+    )

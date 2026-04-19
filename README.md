@@ -252,7 +252,7 @@ Request:
 6. Return created reminder
 
 ✅ Get All Reminders of the user
-GET /reminders/{user_id}
+POST /reminders/search
 Query params:
 ?from=2026-03-25
 ?to=2026-03-30
