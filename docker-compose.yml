@@ -8,23 +8,41 @@ services:
     ports:
       - '8000:8000'
     networks:
-      - mp_net
-    volumes:
-      - ./app_capstone:/project/app:r
-      - ./migrations_capstone:/project/migrations:r
+      - capstone_net
     environment:
-      PGSQL_HOST: postgres
+      PGSQL_HOST: postgres_capstone
       PGSQL_PORT: 5432
       PGSQL_USER: postgres
       PGSQL_PASSWORD: postgres
       PGSQL_DB_NAME: postgres_capstone
+    depends_on:
+      postgres_capstone:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '5173:5173'
+    networks:
+      - capstone_net
+    volumes:
+      - ./frontend:/app:rw
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api
+    depends_on:
+      - app_capstone
+    stdin_open: true
+    tty: true
 
   postgres_capstone:
     image: 'postgres:17'
     ports:
       - '5432:5432'
     networks:
-      - mp_net
+      - capstone_net
     volumes:
       - postgres_data_capstone:/var/lib/postgresql:rw
     environment:
@@ -40,7 +58,7 @@ services:
       timeout: 10s
 
 networks:
-  mp_net:
+  capstone_net:
     driver: bridge
 
 volumes:

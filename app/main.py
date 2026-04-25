@@ -134,10 +134,14 @@ class FastApiAbstractFactory:
             # allows cross origins for dev SPA
             app.add_middleware(
                 fastapi.middleware.cors.CORSMiddleware,
-                allow_origins=['http://localhost:8000'],
+                allow_origins=[
+                    'http://localhost:5173',
+                    'http://localhost:8000',
+                    'http://127.0.0.1:5173',
+                ],
                 allow_credentials=True,
                 allow_methods=['*'],
-                allow_headers=['x-xsrf-token'],
+                allow_headers=['*'],
             )
 
         app.add_middleware(LoggingMiddleware)
