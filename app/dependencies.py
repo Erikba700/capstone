@@ -50,9 +50,7 @@ async def get_current_user(
 ) -> UserEntity:
     """Get authenticated user from credentials."""
     try:
-        payload = jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.algorithm]
-        )
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.algorithm])
         token_data = TokenPayloadSchema(**payload)
 
         if datetime.fromtimestamp(timestamp=token_data.exp, tz=UTC) < datetime.now(UTC):

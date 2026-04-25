@@ -12,6 +12,8 @@ __pycache__/
 ### lockal files ###
 .env
 
+xare.py
+
 # Logs
 logs
 *.log

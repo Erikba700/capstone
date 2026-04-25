@@ -71,5 +71,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default='')
     jwt_refresh_secret_key: str = Field(default='')
 
+    email_address: str = Field(default='')
+    email_password: str = Field(default='')
+
 
 settings = Settings()  # type: ignore

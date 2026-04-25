@@ -32,8 +32,13 @@ async def create_reminder(
     user: Annotated[UserEntity, Depends(get_current_user)],
     schema: RemindersCreateRequestSchema,
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
-) -> ReminderEntity:
-    """Create new reminder."""
+) -> dict:
+    """Create new reminder.
+
+    If user_id and scheduled_time are provided, a notification will be
+    scheduled for that time. If user_id is provided but scheduled_time
+    is None, a notification will be sent immediately.
+    """
     service = ReminderService(repos=repos)
 
     reminder_entity = ReminderEntity.create_new(
@@ -43,8 +48,14 @@ async def create_reminder(
         is_completed=schema.is_completed,
     )
 
-    created_reminder = await service.create_reminder(entity=reminder_entity)
-    return created_reminder
+    created_reminder = await service.create_reminder(
+        entity=reminder_entity,
+        schema=schema,
+    )
+
+    # Enrich with notification info before returning
+    enriched_reminder = await service.enrich_reminder_with_notification_info(created_reminder)
+    return enriched_reminder
 
 
 @router.post('/reminders/search', response_model=RemindersListResponseSchema)
@@ -52,14 +63,17 @@ async def get_reminders(
     filters: RemindersFiltersSchema,
     user: Annotated[UserEntity, Depends(get_current_user)],
     repos: Annotated[RepoFactory, Depends(get_repo)],
-) -> dict[str, list[ReminderEntity]]:
+) -> dict:
     """Get all reminders for a user."""
     service = ReminderService(repos=repos)
     reminders = await service.get_reminders_by_owner_id(
         owner_id=user.id,
         filters=filters,
     )
-    return {'reminders': reminders}
+
+    # Enrich reminders with notification info
+    enriched_reminders = await service.enrich_reminders_with_notification_info(reminders)
+    return {'reminders': enriched_reminders}
 
 
 @router.patch('/reminders/{reminder_id}', response_model=RemindersResponseSchema)
@@ -68,8 +82,14 @@ async def update_reminder(
     reminder_id: uuid.UUID,
     schema: RemindersUpdateRequestSchema,
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
-) -> ReminderEntity:
-    """Update a reminder by id."""
+) -> dict:
+    """Update a reminder by id.
+
+    If user_id and scheduled_time are provided, a notification will be
+    scheduled for that time (to be handled by Celery/Redis in the future).
+    If user_id is provided but scheduled_time is None, a notification
+    will be sent immediately.
+    """
     service = ReminderService(repos=repos)
 
     updated_reminder = await service.update_reminder(
@@ -78,7 +98,9 @@ async def update_reminder(
         user=user,
     )
 
-    return updated_reminder
+    # Enrich with notification info before returning
+    enriched_reminder = await service.enrich_reminder_with_notification_info(updated_reminder)
+    return enriched_reminder
 
 
 @router.delete('/reminders/{reminder_id}', status_code=status.HTTP_204_NO_CONTENT)

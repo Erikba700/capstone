@@ -1,7 +1,10 @@
 import uuid
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
-from app.entities import DomainEntity, UserEntity
+from app.entities.domain_entity import DomainEntity
+
+if TYPE_CHECKING:
+    from app.entities.user import UserEntity
 
 
 class ReminderEntity(DomainEntity):

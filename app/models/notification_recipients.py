@@ -12,17 +12,13 @@ class NotificationRecipients(DomainSqlModel):
 
     __tablename__ = 'notification_recipients'
 
-    reminder_id: Mapped[uuid.UUID] = mapped_column(
-        sa.ForeignKey('reminders.id', ondelete='CASCADE')
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        sa.ForeignKey('users.id', ondelete='CASCADE')
-    )
+    reminder_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey('reminders.id', ondelete='CASCADE'))
+    user_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey('users.id', ondelete='CASCADE'))
 
     message: Mapped[str] = mapped_column(sa.String, nullable=True)
-    scheduled_time: Mapped[datetime] = mapped_column(sa.DateTime, nullable=True)
-
-    sent_at: Mapped[datetime] = mapped_column(sa.DateTime, nullable=True)
+    creator_email: Mapped[str] = mapped_column(sa.String, nullable=True)
+    scheduled_time: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
+    sent_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     is_read: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     # Relationships

@@ -14,6 +14,8 @@ export interface Reminder {
   is_completed: boolean;
   created_at: string;
   updated_at: string;
+  scheduled_time?: string | null;  // Optional: ISO 8601 datetime when notification is scheduled
+  notified_immediately?: boolean;  // Optional: true if notification was sent immediately
 }
 
 export interface Notification {
@@ -44,12 +46,16 @@ export interface CreateReminderRequest {
   title: string;
   description?: string;
   is_completed?: boolean;
+  scheduled_time?: string | null;  // ISO 8601 datetime string or null
+  user_id?: string;                // User to notify
 }
 
 export interface UpdateReminderRequest {
   title?: string;
   description?: string;
   is_completed?: boolean;
+  scheduled_time?: string | null;  // ISO 8601 datetime string or null
+  user_id?: string;                // User to notify
 }
 
 export interface RemindersFilters {

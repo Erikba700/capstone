@@ -1,5 +1,5 @@
 import type { Reminder } from '../types';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { useDarkMode } from '../hooks/useDarkMode';
 
 interface ReminderCardProps {
@@ -16,6 +16,11 @@ export default function ReminderCard({
   onDelete,
 }: ReminderCardProps) {
   const { isDarkMode } = useDarkMode();
+
+  // Check if reminder has scheduling info
+  const hasScheduledNotification = reminder.scheduled_time;
+  const scheduledDate = reminder.scheduled_time ? new Date(reminder.scheduled_time) : null;
+  const wasNotifiedImmediately = reminder.notified_immediately;
 
   return (
     <div className="card hover:shadow-lg transition-shadow">
@@ -54,6 +59,38 @@ export default function ReminderCard({
               >
                 {reminder.description}
               </p>
+            )}
+
+            {/* Scheduling Status */}
+            {(hasScheduledNotification || wasNotifiedImmediately) && (
+              <div className="flex items-center gap-2 mb-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  style={{ color: '#0284c7' }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: '#0284c7' }}
+                >
+                  {hasScheduledNotification && scheduledDate ? (
+                    <>
+                      Scheduled: {format(scheduledDate, 'MMM d, yyyy h:mm a')}
+                    </>
+                  ) : wasNotifiedImmediately ? (
+                    <>Notified immediately</>
+                  ) : null}
+                </span>
+              </div>
             )}
 
             <p

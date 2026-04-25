@@ -30,22 +30,44 @@ export default function Dashboard() {
     fetchReminders();
   };
 
-  const handleCreateReminder = async (data: { title: string; description?: string }) => {
+  const handleCreateReminder = async (data: {
+    title: string;
+    description?: string;
+    scheduled_time?: string | null;
+    user_id?: string;
+  }) => {
     try {
       await createReminder(data);
-      toast.success('Reminder created successfully!');
+      if (data.scheduled_time) {
+        toast.success('Reminder created and scheduled for notification!');
+      } else if (data.user_id) {
+        toast.success('Reminder created and notification sent!');
+      } else {
+        toast.success('Reminder created successfully!');
+      }
     } catch (error) {
       toast.error('Failed to create reminder');
     }
   };
 
-  const handleEditReminder = async (data: { title: string; description?: string }) => {
+  const handleEditReminder = async (data: {
+    title: string;
+    description?: string;
+    scheduled_time?: string | null;
+    user_id?: string;
+  }) => {
     if (!editingReminder) return;
 
     try {
       await updateReminder(editingReminder.id, data);
       setEditingReminder(null);
-      toast.success('Reminder updated successfully!');
+      if (data.scheduled_time) {
+        toast.success('Reminder updated and notification scheduled!');
+      } else if (data.user_id) {
+        toast.success('Reminder updated and notification sent!');
+      } else {
+        toast.success('Reminder updated successfully!');
+      }
     } catch (error) {
       toast.error('Failed to update reminder');
     }

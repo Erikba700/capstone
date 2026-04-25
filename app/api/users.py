@@ -27,9 +27,7 @@ from app.utils import (
 router = APIRouter(tags=['Users'])
 
 
-@router.post(
-    '/signup', summary='Create new user', response_model=UserSignUpResponseSchema
-)
+@router.post('/signup', summary='Create new user', response_model=UserSignUpResponseSchema)
 async def create_user(
     schema: UserSignUpRequestSchema,
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],

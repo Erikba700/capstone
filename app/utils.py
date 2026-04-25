@@ -45,9 +45,7 @@ def create_access_token(
     subject: uuid.UUID,
 ) -> str:
     """Create access token."""
-    expires_delta = get_utc_now() + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    expires_delta = get_utc_now() + timedelta(minutes=settings.access_token_expire_minutes)
 
     to_encode = {'exp': expires_delta, 'sub': str(subject)}
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, settings.algorithm)
@@ -58,12 +56,8 @@ def create_refresh_token(
     subject: uuid.UUID,
 ) -> str:
     """Create refresh token."""
-    expires_delta = get_utc_now() + timedelta(
-        minutes=settings.refresh_token_expire_minutes
-    )
+    expires_delta = get_utc_now() + timedelta(minutes=settings.refresh_token_expire_minutes)
 
     to_encode = {'exp': expires_delta, 'sub': str(subject)}
-    encoded_jwt = jwt.encode(
-        to_encode, settings.jwt_refresh_secret_key, settings.algorithm
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_refresh_secret_key, settings.algorithm)
     return encoded_jwt

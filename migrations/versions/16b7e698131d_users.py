@@ -24,9 +24,7 @@ def upgrade() -> None:
     op.create_table(
         'users',
         sa.Column('name', sa.VARCHAR(length=255), nullable=False, comment='Name'),
-        sa.Column(
-            'email', sa.VARCHAR(length=255), nullable=False, comment='account email'
-        ),
+        sa.Column('email', sa.VARCHAR(length=255), nullable=False, comment='account email'),
         sa.Column(
             'hashed_password',
             sa.VARCHAR(length=255),

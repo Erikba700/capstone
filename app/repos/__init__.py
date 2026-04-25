@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession as PgsqlSession
 
+from .notifications_pgsql_repo import NotificationPgsqlRepo
 from .reminder_pgsql_repo import ReminderPgsqlRepo
 from .user_pgsql_repo import UserPgsqlRepo
 
@@ -23,8 +24,14 @@ class RepoFactory:
         """Init PostgreSQL repo for reminders."""
         return ReminderPgsqlRepo(self.pgsql_session)
 
+    @property
+    def notification_pgsql_repo(self) -> NotificationPgsqlRepo:
+        """Init PostgreSQL repo for notifications."""
+        return NotificationPgsqlRepo(self.pgsql_session)
+
 
 __all__ = [
+    'NotificationPgsqlRepo',
     'ReminderPgsqlRepo',
     'RepoFactory',
     'UserPgsqlRepo',

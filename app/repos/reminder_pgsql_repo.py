@@ -29,12 +29,7 @@ class ReminderPgsqlQueries:
     @staticmethod
     def update_reminder_query(reminder_data: dict) -> Update:
         """Update a reminder query."""
-        return (
-            update(Reminders)
-            .values(**reminder_data)
-            .where(Reminders.id == reminder_data['id'])
-            .returning(Reminders)
-        )
+        return update(Reminders).values(**reminder_data).where(Reminders.id == reminder_data['id']).returning(Reminders)
 
     @staticmethod
     def select_reminders_by_owner_id_query(
@@ -46,11 +41,7 @@ class ReminderPgsqlQueries:
 
         for filter_name, filter_value in filters.items():
             column = getattr(Reminders, filter_name)
-            query = query.where(
-                column.is_(filter_value)
-                if isinstance(filter_value, bool)
-                else column == filter_value
-            )
+            query = query.where(column.is_(filter_value) if isinstance(filter_value, bool) else column == filter_value)
 
         query = query.order_by(Reminders.created_at.desc())
 
@@ -70,14 +61,10 @@ class ReminderPgsqlRepo:
 
     async def find_by_id(self, reminder_id: uuid.UUID) -> ReminderEntity | None:
         """Find a reminder by its id. Returns None if not found."""
-        query = self.queries.select_reminder_by_reminder_id_query(
-            reminder_id=reminder_id
-        )
+        query = self.queries.select_reminder_by_reminder_id_query(reminder_id=reminder_id)
         instance = await self.session.scalar(query)
 
-        logger.info(
-            'Found reminder', reminder_id=reminder_id, found=(instance is not None)
-        )
+        logger.info('Found reminder', reminder_id=reminder_id, found=(instance is not None))
 
         if instance is None:
             return None
@@ -138,9 +125,7 @@ class ReminderPgsqlRepo:
 
     async def delete_by_id(self, reminder_id: uuid.UUID) -> None:
         """Delete a reminder by its id."""
-        query = self.queries.select_reminder_by_reminder_id_query(
-            reminder_id=reminder_id
-        )
+        query = self.queries.select_reminder_by_reminder_id_query(reminder_id=reminder_id)
         instance = await self.session.scalar(query)
         await self.session.delete(instance)
         logger.info('Deleted reminder', reminder=instance)

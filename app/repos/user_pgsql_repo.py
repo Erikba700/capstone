@@ -38,12 +38,7 @@ class UserPgsqlQueries:
     @staticmethod
     def update_user_query(user_data: dict) -> Update:
         """Update a user."""
-        return (
-            update(Users)
-            .values(**user_data)
-            .where(Users.id == user_data['id'])
-            .returning(Users)
-        )
+        return update(Users).values(**user_data).where(Users.id == user_data['id']).returning(Users)
 
 
 class UserPgsqlRepo:

@@ -8,6 +8,10 @@ export
 dev:
 	uv run -m app.main --mode dev
 
+.PHONY: front
+front:
+	cd frontend && npm run dev
+
 .PHONY: fmt
 fmt:
 	uv run ruff format .
