@@ -28,6 +28,13 @@ class Users(DomainSqlModel):
         nullable=False,
         comment='hashed password',
     )
+    timezone: Mapped[str] = mapped_column(
+        sa.VARCHAR(50),
+        nullable=False,
+        default='UTC',
+        server_default='UTC',
+        comment='User timezone (e.g., UTC, America/New_York, Asia/Yerevan)',
+    )
 
     # groups = relationship("GroupMembers", back_populates="user")
     owned_reminders = relationship(

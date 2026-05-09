@@ -2,6 +2,7 @@ import { useState, type FormEvent, useEffect } from 'react';
 import type { Reminder } from '../types';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuthStore } from '../context/store';
+import { formatDateTimeWithTimezone, getMinDateTimeInTimezone } from '../utils/timezone';
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -30,6 +31,9 @@ export default function ReminderModal({
   const [notifyUser, setNotifyUser] = useState(false);
   const { isDarkMode } = useDarkMode();
   const { user } = useAuthStore();
+
+  // Get minimum date/time in user's timezone
+  const minDateTime = user ? getMinDateTimeInTimezone(user.timezone) : { date: '', time: '' };
 
   useEffect(() => {
     if (reminder) {
@@ -66,8 +70,17 @@ export default function ReminderModal({
 
         // If both date and time are provided, schedule for future
         if (scheduledDate && scheduledTime) {
-          // Combine date and time into ISO 8601 format
-          data.scheduled_time = `${scheduledDate}T${scheduledTime}:00Z`;
+          // Convert local datetime to ISO 8601 with timezone offset
+          try {
+            data.scheduled_time = formatDateTimeWithTimezone(
+              scheduledDate,
+              scheduledTime,
+              user.timezone
+            );
+          } catch (error) {
+            console.error('Error formatting datetime:', error);
+            throw new Error('Invalid date/time format');
+          }
         } else {
           // If only notification is checked without date/time, send immediately
           data.scheduled_time = null;
@@ -202,7 +215,7 @@ export default function ReminderModal({
                 {notifyUser && (
                   <>
                     <div className="text-xs" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
-                      Leave date/time empty to send notification immediately, or set a future time.
+                      Leave date/time empty to send notification immediately, or set a future time in your timezone ({user?.timezone || 'UTC'}).
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -220,7 +233,7 @@ export default function ReminderModal({
                           value={scheduledDate}
                           onChange={(e) => setScheduledDate(e.target.value)}
                           className="input-field text-sm"
-                          min={new Date().toISOString().split('T')[0]}
+                          min={minDateTime.date}
                         />
                       </div>
 
@@ -270,4 +283,3 @@ export default function ReminderModal({
     </div>
   );
 }
-

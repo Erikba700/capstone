@@ -11,6 +11,7 @@ class UserEntity(DomainEntity):
     name: str
     email: str
     hashed_password: str
+    timezone: str
 
     @classmethod
     def create_new(
@@ -18,6 +19,7 @@ class UserEntity(DomainEntity):
         name: str,
         email: str,
         hashed_password: str,
+        timezone: str = 'UTC',
     ) -> Self:
         """Construct new user."""
         id_ = cls.generate_id()
@@ -29,6 +31,7 @@ class UserEntity(DomainEntity):
             name=name,
             email=email,
             hashed_password=hashed_password,
+            timezone=timezone,
         )
 
     def update(

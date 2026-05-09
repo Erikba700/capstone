@@ -68,7 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-export const useRemindersStore = create<RemindersState>((set, get) => ({
+export const useRemindersStore = create<RemindersState>((set) => ({
   reminders: [],
   isLoading: false,
   error: null,
@@ -88,7 +88,7 @@ export const useRemindersStore = create<RemindersState>((set, get) => ({
     try {
       const newReminder = await remindersApi.create(data);
       set((state) => ({
-        reminders: [...state.reminders, newReminder],
+        reminders: [newReminder, ...state.reminders], // Add new reminder at the beginning
         isLoading: false,
       }));
     } catch (error: any) {

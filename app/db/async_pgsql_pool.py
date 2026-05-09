@@ -51,8 +51,12 @@ class AsyncPostgresPool(AbstractAsyncPool):
             url=self._url,
             pool_size=10,  # up to x db connections
             max_overflow=10,  # allow y more connections in overflow
+            pool_pre_ping=True,  # verify connections before using
         )
-        self._session_pool = async_sessionmaker(bind=self._engine)
+        self._session_pool = async_sessionmaker(
+            bind=self._engine,
+            expire_on_commit=False,  # prevent lazy loading issues
+        )
 
     def get_session(self) -> AsyncSession:
         """Returns a new async session (use with 'async with').

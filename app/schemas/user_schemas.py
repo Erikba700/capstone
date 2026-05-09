@@ -22,6 +22,7 @@ class UserSignUpRequestSchema(BaseSchema):
     name: str
     email: str
     password: str
+    timezone: str = 'UTC'  # Default to UTC if not provided
 
 
 class UserLoginResponseSchema(BaseSchema):

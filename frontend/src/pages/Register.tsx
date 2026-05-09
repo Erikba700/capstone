@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { toast } from 'react-toastify';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { COMMON_TIMEZONES, getBrowserTimezone } from '../utils/timezone';
 
 export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [timezone, setTimezone] = useState(getBrowserTimezone());
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { isDarkMode } = useDarkMode();
@@ -24,7 +26,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      await authApi.signUp({ name, email, password });
+      await authApi.signUp({ name, email, password, timezone });
       toast.success('Account created successfully! Please sign in.');
       navigate('/login');
     } catch (error: any) {
@@ -90,6 +92,32 @@ export default function Register() {
                 required
                 placeholder="you@example.com"
               />
+            </div>
+
+            <div className="mb-4">
+              <label
+                htmlFor="timezone"
+                className="block text-sm font-medium mb-2"
+                style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+              >
+                Timezone
+              </label>
+              <select
+                id="timezone"
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="input-field"
+                required
+              >
+                {COMMON_TIMEZONES.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label} ({tz.offset})
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                Your scheduled reminders will use this timezone
+              </p>
             </div>
 
             <div className="mb-4">

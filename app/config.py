@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     pgsql_password: str = Field(default='postgres')
     pgsql_db_name: str = Field(default='postgres_capstone')
 
+    redis_host: str = Field(default='localhost')
+    redis_port: int = Field(default=6379)
+    redis_db: int = Field(default=0)
+
     app_main_version: str = Field(default='1')
     app_version: str = get_app_version()
     app_name: str = Field(default='Capstone API')

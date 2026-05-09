@@ -1,6 +1,8 @@
 import type { Reminder } from '../types';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useAuthStore } from '../context/store';
+import { formatUTCToLocalTimezone } from '../utils/timezone';
 
 interface ReminderCardProps {
   reminder: Reminder;
@@ -16,11 +18,16 @@ export default function ReminderCard({
   onDelete,
 }: ReminderCardProps) {
   const { isDarkMode } = useDarkMode();
+  const { user } = useAuthStore();
 
   // Check if reminder has scheduling info
   const hasScheduledNotification = reminder.scheduled_time;
-  const scheduledDate = reminder.scheduled_time ? new Date(reminder.scheduled_time) : null;
   const wasNotifiedImmediately = reminder.notified_immediately;
+
+  // Format scheduled time in user's timezone
+  const formattedScheduledTime = hasScheduledNotification && user
+    ? formatUTCToLocalTimezone(reminder.scheduled_time!, user.timezone)
+    : null;
 
   return (
     <div className="card hover:shadow-lg transition-shadow">
@@ -82,9 +89,9 @@ export default function ReminderCard({
                   className="text-xs font-medium"
                   style={{ color: '#0284c7' }}
                 >
-                  {hasScheduledNotification && scheduledDate ? (
+                  {hasScheduledNotification && formattedScheduledTime ? (
                     <>
-                      Scheduled: {format(scheduledDate, 'MMM d, yyyy h:mm a')}
+                      Scheduled: {formattedScheduledTime}
                     </>
                   ) : wasNotifiedImmediately ? (
                     <>Notified immediately</>
@@ -123,4 +130,3 @@ export default function ReminderCard({
     </div>
   );
 }
-

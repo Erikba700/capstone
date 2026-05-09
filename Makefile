@@ -12,6 +12,14 @@ dev:
 front:
 	cd frontend && npm run dev
 
+.PHONY: celery-worker
+celery-worker:
+	uv run celery -A app.celery_app worker --loglevel=info
+
+.PHONY: celery-beat
+celery-beat:
+	uv run celery -A app.celery_app beat --loglevel=info
+
 .PHONY: fmt
 fmt:
 	uv run ruff format .

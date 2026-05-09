@@ -12,6 +12,7 @@ from app.schemas.reminder_schemas import (
     RemindersUpdateRequestSchema,
 )
 from app.services.notifications_service import NotificationService
+from app.utils import convert_to_utc
 
 logger = structlog.getLogger(__name__)
 
@@ -55,23 +56,37 @@ class ReminderService:
                 msg = f'User with id {schema.user_id} not found'
                 raise BadRequestError(msg) from None
 
+            # Convert scheduled_time from user's timezone to UTC
+            scheduled_time_utc = None
+            if schema.scheduled_time is not None:
+                scheduled_time_utc = convert_to_utc(
+                    schema.scheduled_time,
+                    notification_user.timezone,
+                )
+                logger.info(
+                    f'Converted scheduled time from {notification_user.timezone} to UTC',
+                    original_time=schema.scheduled_time,
+                    utc_time=scheduled_time_utc,
+                    user_timezone=notification_user.timezone,
+                )
+
             notification = NotificationEntity.create_new(
                 user_id=notification_user.id,
                 reminder_id=reminder.id,
                 message=f'New reminder created: {reminder.title}',
                 creator_email=owner.email,
-                scheduled_time=schema.scheduled_time,
+                scheduled_time=scheduled_time_utc,
             )
-
-            created_notification = await self.repos.notification_pgsql_repo.insert(notification)
 
             notification_scheduled_time = payload.pop('scheduled_time', None)
 
             if notification_scheduled_time is None:
+                # Send notification immediately
+                created_notification = await self.repos.notification_pgsql_repo.insert(notification)
                 success = notification_service.send_reminder_notification(
                     user=notification_user,
                     reminder=reminder,
-                    notification=notification,
+                    notification=created_notification,
                 )
                 if success:
                     logger.info(
@@ -86,9 +101,10 @@ class ReminderService:
                     )
             else:
                 # scheduled_time is provided, create scheduled notification in DB
-                await notification_service.create_scheduled_notification(notification)
+                created_notification = await notification_service.create_scheduled_notification(notification)
                 logger.info(
-                    f'Scheduled notification created for user {notification_user.email} at {schema.scheduled_time}'
+                    f'Scheduled notification created for user {notification_user.email} at '
+                    f'{scheduled_time_utc} UTC (user timezone: {notification_user.timezone})'
                 )
 
         return reminder
@@ -136,6 +152,20 @@ class ReminderService:
             notification_user_id = payload.pop('user_id')
             notification_scheduled_time = payload.pop('scheduled_time', None)
 
+            # Convert scheduled_time from user's timezone to UTC if provided
+            scheduled_time_utc = None
+            if notification_scheduled_time is not None:
+                scheduled_time_utc = convert_to_utc(
+                    notification_scheduled_time,
+                    notification_user.timezone,
+                )
+                logger.info(
+                    f'Converted scheduled time from {notification_user.timezone} to UTC',
+                    original_time=notification_scheduled_time,
+                    utc_time=scheduled_time_utc,
+                    user_timezone=notification_user.timezone,
+                )
+
             # Update the reminder with remaining fields
             updated_reminder = reminder.update(
                 payload=payload,
@@ -151,13 +181,13 @@ class ReminderService:
                 reminder_id=updated_reminder.id,
                 message=f'Reminder updated: {updated_reminder.title}',
                 creator_email=user.email,
-                scheduled_time=notification_scheduled_time,
+                scheduled_time=scheduled_time_utc,
             )
 
             notification_service = NotificationService(repos=self.repos)
 
             # If scheduled_time is None, send notification immediately
-            if notification_scheduled_time is None:
+            if scheduled_time_utc is None:
                 # Create notification in DB and send immediately
                 (
                     created_notification,
@@ -183,7 +213,8 @@ class ReminderService:
                 # scheduled_time is provided, create scheduled notification in DB
                 await notification_service.create_scheduled_notification(notification)
                 logger.info(
-                    f'Scheduled notification created for user {notification_user.id} at {notification_scheduled_time}'
+                    f'Scheduled notification created for user {notification_user.id} at '
+                    f'{scheduled_time_utc} UTC (user timezone: {notification_user.timezone})'
                 )
 
             return updated_reminder

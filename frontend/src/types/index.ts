@@ -2,6 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  timezone: string;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +36,7 @@ export interface SignUpRequest {
   name: string;
   email: string;
   password: string;
+  timezone?: string;
 }
 
 export interface AuthResponse {

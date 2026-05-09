@@ -21,6 +21,7 @@ from app.utils import (
     create_access_token,
     create_refresh_token,
     get_hashed_password,
+    validate_timezone,
     verify_password,
 )
 
@@ -40,11 +41,20 @@ async def create_user(
         msg = 'User with this email already exist'
         raise BadRequestError(msg) from None
 
+    # Validate timezone
+    if not validate_timezone(schema.timezone):
+        msg = (
+            f'Invalid timezone: {schema.timezone}. '
+            'Please use a valid IANA timezone (e.g., UTC, Asia/Yerevan, America/New_York)'
+        )
+        raise BadRequestError(msg) from None
+
     hashed_password = get_hashed_password(schema.password)
     new_user_data = UserEntity.create_new(
         name=schema.name,
         email=schema.email,
         hashed_password=hashed_password,
+        timezone=schema.timezone,
     )
     new_user = await service.insert_user(entity=new_user_data)
 
