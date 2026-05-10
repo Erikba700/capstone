@@ -37,3 +37,23 @@ class TokenPayloadSchema(BaseSchema):
 
     sub: str
     exp: int
+
+
+class UserUpdateRequestSchema(BaseSchema):
+    """Schema for updating user profile."""
+
+    name: str | None = None
+    timezone: str | None = None
+    current_password: str | None = None
+    new_password: str | None = None
+
+
+class UserProfileResponseSchema(BaseSchema):
+    """Schema for user profile response."""
+
+    id: uuid.UUID
+    name: str
+    email: str
+    timezone: str
+    created_at: AwareDatetime
+    updated_at: AwareDatetime

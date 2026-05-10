@@ -46,3 +46,12 @@ class UserService:
         """Update an existing user."""
         user = await self.repos.user_pgsql_repo.update(entity=entity)
         return user
+
+    async def update_profile(
+        self,
+        user: UserEntity,
+        payload: dict,
+    ) -> UserEntity:
+        """Update user profile fields (name, timezone, hashed_password)."""
+        updated = user.update(payload=payload)
+        return await self.repos.user_pgsql_repo.update(entity=updated)

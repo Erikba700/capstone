@@ -43,9 +43,14 @@ export default function Navbar() {
                 {isDarkMode ? '☀️' : '🌙'}
               </button>
 
-              <span style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}>
+              <Link
+                to="/profile"
+                className="hover:text-primary-600 font-medium"
+                style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+                title="Profile settings"
+              >
                 {user.name}
-              </span>
+              </Link>
 
               <button
                 onClick={handleLogout}

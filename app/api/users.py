@@ -13,8 +13,10 @@ from app.exceptions import BadRequestError
 from app.repos import RepoFactory
 from app.schemas.user_schemas import (
     UserLoginResponseSchema,
+    UserProfileResponseSchema,
     UserSignUpRequestSchema,
     UserSignUpResponseSchema,
+    UserUpdateRequestSchema,
 )
 from app.services import UserService
 from app.utils import (
@@ -67,6 +69,42 @@ async def get_authenticated_user(
 ) -> UserEntity:
     """Get user data."""
     return user
+
+
+@router.patch('/user/profile', response_model=UserProfileResponseSchema)
+async def update_profile(
+    schema: UserUpdateRequestSchema,
+    user: Annotated[UserEntity, Depends(get_current_user)],
+    repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
+) -> UserEntity:
+    """Update authenticated user profile (name, timezone, password)."""
+    service = UserService(repos=repos)
+    payload: dict = {}
+
+    if schema.name is not None:
+        payload['name'] = schema.name
+
+    if schema.timezone is not None:
+        if not validate_timezone(schema.timezone):
+            msg = f'Invalid timezone: {schema.timezone}. Please use a valid IANA timezone (e.g., UTC, Asia/Yerevan)'
+            raise BadRequestError(msg) from None
+        payload['timezone'] = schema.timezone
+
+    if schema.new_password is not None:
+        if schema.current_password is None:
+            msg = 'current_password is required to set a new password'
+            raise BadRequestError(msg) from None
+        if not verify_password(schema.current_password, user.hashed_password):
+            msg = 'Current password is incorrect'
+            raise BadRequestError(msg) from None
+        payload['hashed_password'] = get_hashed_password(schema.new_password)
+
+    if not payload:
+        msg = 'No fields to update'
+        raise BadRequestError(msg) from None
+
+    updated_user = await service.update_profile(user=user, payload=payload)
+    return updated_user
 
 
 @router.post(
