@@ -24,30 +24,19 @@ from app.services.notifications_service import NotificationService
 logger = structlog.getLogger(__name__)
 
 
-class CeleryPoolHolder:
-    """Holds singleton database pool for Celery tasks."""
-
-    _pool: AsyncPostgresPool | None = None
-
-    @classmethod
-    def get_pool(cls) -> AsyncPostgresPool:
-        """Get or create singleton database pool."""
-        if cls._pool is None:
-            cls._pool = AsyncPostgresPool()
-            logger.info('Database pool initialized for Celery tasks')
-        return cls._pool
-
-
 @asynccontextmanager
 async def get_celery_tx_repo() -> AsyncGenerator[RepoFactory, None]:
     """Get repository with transaction for Celery tasks.
 
-    Celery equivalent of get_shared_tx_repo from dependencies.py.
-    Uses transaction_context for automatic commit/rollback.
+    Creates a fresh pool per call to avoid asyncio event-loop conflicts
+    that occur when reusing a pool across multiple asyncio.run() invocations.
     """
-    pool = CeleryPoolHolder.get_pool()
-    async with transaction_context(pool) as session:
-        yield RepoFactory(pgsql_session=session)
+    pool = AsyncPostgresPool()
+    try:
+        async with transaction_context(pool) as session:
+            yield RepoFactory(pgsql_session=session)
+    finally:
+        await pool.close()
 
 
 @celery_app.task(name='app.tasks.send_scheduled_notifications')
