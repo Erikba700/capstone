@@ -24,6 +24,7 @@ class ReminderEntity(DomainEntity):
     description: str | None
     owner_id: uuid.UUID
     status: ReminderStatus = ReminderStatus.PENDING
+    group_id: uuid.UUID | None = None
     updated_by: uuid.UUID | None = None
     completed_by: uuid.UUID | None = None
 
@@ -33,6 +34,7 @@ class ReminderEntity(DomainEntity):
         title: str,
         description: str | None,
         owner_id: uuid.UUID,
+        group_id: uuid.UUID | None = None,
         *,
         status: ReminderStatus = ReminderStatus.PENDING,
     ) -> Self:
@@ -46,6 +48,7 @@ class ReminderEntity(DomainEntity):
             title=title,
             description=description,
             owner_id=owner_id,
+            group_id=group_id,
             status=status,
         )
 

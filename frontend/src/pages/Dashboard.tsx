@@ -3,7 +3,7 @@ import { useRemindersStore } from '../context/store';
 import ReminderCard from '../components/ReminderCard';
 import ReminderModal from '../components/ReminderModal';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import type { Reminder, ReminderStatus } from '../types';
+import type { Reminder, ReminderStatus, CreateReminderRequest } from '../types';
 import { toast } from 'react-toastify';
 import { useDarkMode } from '../hooks/useDarkMode';
 
@@ -30,13 +30,7 @@ export default function Dashboard() {
     fetchReminders();
   };
 
-  const handleCreateReminder = async (data: {
-    title: string;
-    description?: string;
-    status?: ReminderStatus;
-    scheduled_time?: string | null;
-    user_id?: string;
-  }) => {    try {
+  const handleCreateReminder = async (data: CreateReminderRequest) => {    try {
       await createReminder(data);
       if (data.scheduled_time) {
         toast.success('Reminder created and scheduled for notification!');
@@ -50,13 +44,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleEditReminder = async (data: {
-    title: string;
-    description?: string;
-    status?: ReminderStatus;
-    scheduled_time?: string | null;
-    user_id?: string;
-  }) => {
+  const handleEditReminder = async (data: CreateReminderRequest) => {
     if (!editingReminder) return;
 
     try {

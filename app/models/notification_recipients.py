@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import DomainSqlModel
 
@@ -20,7 +20,3 @@ class NotificationRecipients(DomainSqlModel):
     scheduled_time: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     sent_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     is_read: Mapped[bool] = mapped_column(default=False, nullable=False)
-
-    # Relationships
-    reminder = relationship('Reminders', back_populates='notifications')
-    user = relationship('Users', back_populates='notifications')

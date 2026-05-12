@@ -107,6 +107,12 @@ export default function ReminderCard({
             <p className="text-xs" style={{ color: isDarkMode ? '#6b7280' : '#9ca3af' }}>
               Created {formatDistanceToNow(new Date(reminder.created_at), { addSuffix: true })}
             </p>
+
+            {reminder.updated_by_name && reminder.updated_by !== user?.id && (
+              <p className="text-xs mt-0.5 font-medium" style={{ color: isDarkMode ? '#a78bfa' : '#7c3aed' }}>
+                ✏️ Last updated by {reminder.updated_by_name}
+              </p>
+            )}
           </div>
         </div>
 

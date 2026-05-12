@@ -1,12 +1,10 @@
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import (
-    OAuth2PasswordBearer,
-)
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession as PgsqlSession
@@ -15,6 +13,7 @@ from app import services
 from app.config import settings
 from app.db.transaction_context import transaction_context
 from app.entities import UserEntity
+from app.entities.group_members import GroupMembersEntity
 from app.repos import RepoFactory
 from app.schemas.user_schemas import TokenPayloadSchema
 
@@ -69,3 +68,48 @@ async def get_current_user(
     user = await service.fetch_user_by_id(uuid.UUID(token_data.sub))
 
     return user
+
+
+def require_group_member(group_id: uuid.UUID) -> 'Callable':
+    """Dependency factory: require current user to be a group member."""
+
+    async def _check(
+        user: Annotated[UserEntity, Depends(get_current_user)],
+        repos: Annotated[RepoFactory, Depends(get_repo)],
+    ) -> GroupMembersEntity:
+        from app.services.group_service import GroupService
+
+        membership = await GroupService(repos=repos).require_membership(group_id=group_id, user_id=user.id)
+        return membership
+
+    return _check
+
+
+def require_group_admin(group_id: uuid.UUID) -> 'Callable':
+    """Dependency factory: require current user to be admin or owner."""
+
+    async def _check(
+        user: Annotated[UserEntity, Depends(get_current_user)],
+        repos: Annotated[RepoFactory, Depends(get_repo)],
+    ) -> GroupMembersEntity:
+        from app.services.group_service import GroupService
+
+        membership = await GroupService(repos=repos).require_admin(group_id=group_id, user_id=user.id)
+        return membership
+
+    return _check
+
+
+def require_group_owner(group_id: uuid.UUID) -> 'Callable':
+    """Dependency factory: require current user to be owner."""
+
+    async def _check(
+        user: Annotated[UserEntity, Depends(get_current_user)],
+        repos: Annotated[RepoFactory, Depends(get_repo)],
+    ) -> GroupMembersEntity:
+        from app.services.group_service import GroupService
+
+        membership = await GroupService(repos=repos).require_owner(group_id=group_id, user_id=user.id)
+        return membership
+
+    return _check

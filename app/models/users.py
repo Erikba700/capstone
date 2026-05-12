@@ -1,7 +1,6 @@
 import sqlalchemy as sa
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models import Reminders
 from app.models.base import DomainSqlModel
 
 
@@ -35,11 +34,3 @@ class Users(DomainSqlModel):
         server_default='UTC',
         comment='User timezone (e.g., UTC, America/New_York, Asia/Yerevan)',
     )
-
-    # groups = relationship("GroupMembers", back_populates="user")
-    owned_reminders = relationship(
-        'Reminders',
-        back_populates='owner',
-        foreign_keys=[Reminders.owner_id],
-    )
-    notifications = relationship('NotificationRecipients', back_populates='user')

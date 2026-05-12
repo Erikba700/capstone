@@ -32,6 +32,11 @@ class ReminderPgsqlQueries:
         return update(Reminders).values(**reminder_data).where(Reminders.id == reminder_data['id']).returning(Reminders)
 
     @staticmethod
+    def select_reminders_by_group_id_query(group_id: uuid.UUID) -> Select:
+        """Select reminders belonging to a group."""
+        return select(Reminders).where(Reminders.group_id == group_id).order_by(Reminders.created_at.desc())
+
+    @staticmethod
     def select_reminders_by_owner_id_query(
         owner_id: uuid.UUID,
         filters: dict,
@@ -85,6 +90,14 @@ class ReminderPgsqlRepo:
 
         logger.info('Inserted reminder', id=entity.id)
         return ReminderEntity.model_validate(instance)
+
+    async def fetch_reminders_by_group_id(self, group_id: uuid.UUID) -> list[ReminderEntity]:
+        """Fetch reminders belonging to a group."""
+        query = self.queries.select_reminders_by_group_id_query(group_id=group_id)
+        result = await self.session.execute(query)
+        instances = result.scalars().all()
+        logger.info('Fetched reminders by group id', group_id=group_id, count=len(instances))
+        return [ReminderEntity.model_validate(i) for i in instances]
 
     async def fetch_reminders_by_owner_id(
         self,

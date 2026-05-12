@@ -10,6 +10,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import Groups from './pages/Groups';
+import GroupDetail from './pages/GroupDetail';
 import { useDarkMode } from './hooks/useDarkMode';
 
 function App() {
@@ -64,6 +66,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/groups"
+            element={
+              <ProtectedRoute>
+                <Groups />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/groups/:groupId"
+            element={
+              <ProtectedRoute>
+                <GroupDetail />
               </ProtectedRoute>
             }
           />

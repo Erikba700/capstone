@@ -1,10 +1,41 @@
 export type ReminderStatus = 'pending' | 'in_progress' | 'completed' | 'overdue';
+export type MemberRole = 'owner' | 'admin' | 'member';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   timezone: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  description: string | null;
+  owner_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMember {
+  id: string;
+  user_id: string;
+  group_id: string;
+  role: MemberRole;
+  joined_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReminderAssignee {
+  id: string;
+  reminder_id: string;
+  user_id: string;
+  assigned_by: string;
+  assigned_at: string;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +50,10 @@ export interface Reminder {
   updated_at: string;
   scheduled_time?: string | null;
   notified_immediately?: boolean;
+  group_id?: string | null;
+  assignees?: string[];
+  updated_by?: string | null;
+  updated_by_name?: string | null;
 }
 
 export interface Notification {
@@ -52,6 +87,8 @@ export interface CreateReminderRequest {
   status?: ReminderStatus;
   scheduled_time?: string | null;
   user_id?: string;
+  group_id?: string | null;
+  assignee_ids?: string[];
 }
 
 export interface UpdateReminderRequest {
@@ -60,9 +97,29 @@ export interface UpdateReminderRequest {
   status?: ReminderStatus;
   scheduled_time?: string | null;
   user_id?: string;
+  group_id?: string | null;
+}
+
+export interface CreateGroupRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateGroupRequest {
+  name?: string;
+  description?: string;
+}
+
+export interface AddGroupMemberRequest {
+  email: string;
+  role?: MemberRole;
+}
+
+export interface UpdateGroupMemberRequest {
+  role: MemberRole;
 }
 
 export interface RemindersFilters {
-  is_completed?: boolean;
+  status?: ReminderStatus;
 }
 

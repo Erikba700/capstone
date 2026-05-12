@@ -15,6 +15,8 @@ class RemindersCreateRequestSchema(BaseSchema):
     status: ReminderStatus = ReminderStatus.PENDING
     scheduled_time: AwareDatetime | None = None
     user_id: uuid.UUID | None = None
+    group_id: uuid.UUID | None = None
+    assignee_ids: list[uuid.UUID] | None = None
 
     @model_validator(mode='after')
     def validate_scheduled_time_requires_user_id(self) -> Self:
@@ -33,10 +35,14 @@ class RemindersResponseSchema(BaseSchema):
     description: str | None = None
     owner_id: uuid.UUID
     status: ReminderStatus = ReminderStatus.PENDING
+    group_id: uuid.UUID | None = None
+    updated_by: uuid.UUID | None = None
+    updated_by_name: str | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime
     scheduled_time: AwareDatetime | None = None
     notified_immediately: bool = False
+    assignees: list[uuid.UUID] = []  # noqa: RUF012
 
 
 class RemindersListResponseSchema(BaseSchema):

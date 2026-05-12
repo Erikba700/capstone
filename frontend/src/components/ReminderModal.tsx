@@ -1,8 +1,9 @@
 import { useState, type FormEvent, useEffect } from 'react';
-import type { Reminder, ReminderStatus } from '../types';
+import type { Reminder, ReminderStatus, Group } from '../types';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuthStore } from '../context/store';
 import { formatDateTimeWithTimezone, getMinDateTimeInTimezone } from '../utils/timezone';
+import { groupsApi } from '../api/groups';
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface ReminderModalProps {
     status?: ReminderStatus;
     scheduled_time?: string | null;
     user_id?: string;
+    group_id?: string | null;
   }) => Promise<void>;
   reminder?: Reminder | null;
 }
@@ -31,6 +33,8 @@ export default function ReminderModal({
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [notifyUser, setNotifyUser] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [groupId, setGroupId] = useState<string>('');
   const { isDarkMode } = useDarkMode();
   const { user } = useAuthStore();
 
@@ -38,10 +42,17 @@ export default function ReminderModal({
   const minDateTime = user ? getMinDateTimeInTimezone(user.timezone) : { date: '', time: '' };
 
   useEffect(() => {
+    if (isOpen) {
+      groupsApi.listGroups().then(setGroups).catch(() => {});
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (reminder) {
       setTitle(reminder.title);
       setDescription(reminder.description || '');
       setStatus(reminder.status || 'pending');
+      setGroupId(reminder.group_id || '');
     } else {
       setTitle('');
       setDescription('');
@@ -50,6 +61,7 @@ export default function ReminderModal({
       setScheduledDate('');
       setScheduledTime('');
       setNotifyUser(false);
+      setGroupId('');
     }
   }, [reminder]);
 
@@ -64,10 +76,12 @@ export default function ReminderModal({
         status?: ReminderStatus;
         scheduled_time?: string | null;
         user_id?: string;
+        group_id?: string | null;
       } = {
         title,
         description: description || undefined,
         status,
+        group_id: groupId || null,
       };
 
       // If scheduling is enabled and we have date/time or just want immediate notification
@@ -93,7 +107,7 @@ export default function ReminderModal({
         }
       }
 
-      await onSubmit(data as Parameters<typeof onSubmit>[0]);
+      await onSubmit(data);
 
       // Reset form
       setTitle('');
@@ -103,6 +117,7 @@ export default function ReminderModal({
       setScheduledDate('');
       setScheduledTime('');
       setNotifyUser(false);
+      setGroupId('');
       onClose();
     } catch (error) {
       console.error('Failed to save reminder:', error);
@@ -119,22 +134,23 @@ export default function ReminderModal({
     setScheduledDate('');
     setScheduledTime('');
     setNotifyUser(false);
+    setGroupId('');
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 flex items-center justify-center z-50 p-4"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
     >
-      <div 
+      <div
         className="rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto"
         style={{ backgroundColor: isDarkMode ? '#1f2937' : '#ffffff' }}
       >
-        <h2 
-          className="text-2xl font-bold mb-4"
+        <h2
+          className="text-2l font-bold mb-4"
           style={{ color: isDarkMode ? '#f3f4f6' : '#111827' }}
         >
           {reminder ? 'Edit Reminder' : 'Create New Reminder'}
@@ -199,6 +215,31 @@ export default function ReminderModal({
             </select>
           </div>
 
+          {groups.length > 0 && (
+            <div className="mb-4">
+              <label
+                htmlFor="group"
+                className="block text-sm font-medium mb-2"
+                style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+              >
+                Group (optional)
+              </label>
+              <select
+                id="group"
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                className="input-field"
+              >
+                <option value="">No group</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Scheduling Section */}
           <div className="mb-4">
             <div className="flex items-center mb-3">
@@ -243,7 +284,10 @@ export default function ReminderModal({
 
                 {notifyUser && (
                   <>
-                    <div className="text-xs" style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}>
+                    <div
+                      className="text-xs"
+                      style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
+                    >
                       Leave date/time empty to send notification immediately, or set a future time in your timezone ({user?.timezone || 'UTC'}).
                     </div>
 
