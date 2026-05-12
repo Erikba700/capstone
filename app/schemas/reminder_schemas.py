@@ -3,6 +3,7 @@ from typing import Self
 
 from pydantic import AwareDatetime, model_validator
 
+from app.entities.reminder import ReminderStatus
 from app.schemas.base_schemas import BaseSchema
 
 
@@ -11,7 +12,7 @@ class RemindersCreateRequestSchema(BaseSchema):
 
     title: str
     description: str | None = None
-    is_completed: bool = False
+    status: ReminderStatus = ReminderStatus.PENDING
     scheduled_time: AwareDatetime | None = None
     user_id: uuid.UUID | None = None
 
@@ -31,11 +32,11 @@ class RemindersResponseSchema(BaseSchema):
     title: str
     description: str | None = None
     owner_id: uuid.UUID
-    is_completed: bool = False
+    status: ReminderStatus = ReminderStatus.PENDING
     created_at: AwareDatetime
     updated_at: AwareDatetime
-    scheduled_time: AwareDatetime | None = None  # When notification is scheduled
-    notified_immediately: bool = False  # True if notification was sent immediately
+    scheduled_time: AwareDatetime | None = None
+    notified_immediately: bool = False
 
 
 class RemindersListResponseSchema(BaseSchema):
@@ -47,7 +48,7 @@ class RemindersListResponseSchema(BaseSchema):
 class RemindersFiltersSchema(BaseSchema):
     """Schema for filtering reminders."""
 
-    is_completed: bool | None = None
+    status: ReminderStatus | None = None
 
 
 class RemindersUpdateRequestSchema(BaseSchema):
@@ -55,7 +56,7 @@ class RemindersUpdateRequestSchema(BaseSchema):
 
     title: str | None = None
     description: str | None = None
-    is_completed: bool | None = None
+    status: ReminderStatus | None = None
     owner_id: uuid.UUID | None = None
     scheduled_time: AwareDatetime | None = None
     user_id: uuid.UUID | None = None

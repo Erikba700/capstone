@@ -1,10 +1,12 @@
+# import uuid
+#
 # import sqlalchemy as sa
 # from sqlalchemy.orm import Mapped, mapped_column, relationship
 #
 # from app.models.base import DomainSqlModel
 #
 #
-# class GroupsSqlModel(DomainSqlModel):
+# class Groups(DomainSqlModel):
 #     """Groups SQL model."""
 #
 #     __tablename__ = 'groups'
@@ -15,12 +17,7 @@
 #         nullable=False,
 #         comment='Name',
 #     )
-#     owner_id: Mapped[int] = mapped_column(sa.ForeignKey("users.id"), ondelete="SET NULL")
-#     hashed_password: Mapped[str] = mapped_column(
-#         sa.VARCHAR(255),
-#         nullable=False,
-#         comment='hashed password',
-#     )
+#     owner_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
 #
-#     members = relationship("GroupMember", back_populates="group")
+#     members = relationship("GroupMembers", back_populates="group")
 #     reminders = relationship("Reminder", back_populates="group")

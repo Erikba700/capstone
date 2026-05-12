@@ -1,3 +1,5 @@
+export type ReminderStatus = 'pending' | 'in_progress' | 'completed' | 'overdue';
+
 export interface User {
   id: string;
   name: string;
@@ -12,11 +14,11 @@ export interface Reminder {
   title: string;
   description: string | null;
   owner_id: string;
-  is_completed: boolean;
+  status: ReminderStatus;
   created_at: string;
   updated_at: string;
-  scheduled_time?: string | null;  // Optional: ISO 8601 datetime when notification is scheduled
-  notified_immediately?: boolean;  // Optional: true if notification was sent immediately
+  scheduled_time?: string | null;
+  notified_immediately?: boolean;
 }
 
 export interface Notification {
@@ -47,17 +49,17 @@ export interface AuthResponse {
 export interface CreateReminderRequest {
   title: string;
   description?: string;
-  is_completed?: boolean;
-  scheduled_time?: string | null;  // ISO 8601 datetime string or null
-  user_id?: string;                // User to notify
+  status?: ReminderStatus;
+  scheduled_time?: string | null;
+  user_id?: string;
 }
 
 export interface UpdateReminderRequest {
   title?: string;
   description?: string;
-  is_completed?: boolean;
-  scheduled_time?: string | null;  // ISO 8601 datetime string or null
-  user_id?: string;                // User to notify
+  status?: ReminderStatus;
+  scheduled_time?: string | null;
+  user_id?: string;
 }
 
 export interface RemindersFilters {

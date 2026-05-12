@@ -45,7 +45,7 @@ async def create_reminder(
         title=schema.title,
         description=schema.description,
         owner_id=user.id,
-        is_completed=schema.is_completed,
+        status=schema.status,
     )
 
     created_reminder = await service.create_reminder(

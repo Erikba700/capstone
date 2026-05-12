@@ -1,3 +1,4 @@
+import enum
 import uuid
 from typing import TYPE_CHECKING, Any, Self
 
@@ -7,13 +8,22 @@ if TYPE_CHECKING:
     from app.entities.user import UserEntity
 
 
+class ReminderStatus(enum.StrEnum):
+    """Possible statuses for a reminder."""
+
+    PENDING = 'pending'
+    IN_PROGRESS = 'in_progress'
+    COMPLETED = 'completed'
+    OVERDUE = 'overdue'
+
+
 class ReminderEntity(DomainEntity):
     """Reminder domain entity."""
 
     title: str
     description: str | None
     owner_id: uuid.UUID
-    is_completed: bool
+    status: ReminderStatus = ReminderStatus.PENDING
     updated_by: uuid.UUID | None = None
     completed_by: uuid.UUID | None = None
 
@@ -24,7 +34,7 @@ class ReminderEntity(DomainEntity):
         description: str | None,
         owner_id: uuid.UUID,
         *,
-        is_completed: bool = False,
+        status: ReminderStatus = ReminderStatus.PENDING,
     ) -> Self:
         """Construct new reminder."""
         id_ = cls.generate_id()
@@ -36,10 +46,10 @@ class ReminderEntity(DomainEntity):
             title=title,
             description=description,
             owner_id=owner_id,
-            is_completed=is_completed,
+            status=status,
         )
 
-    def update(self, payload: dict[str, Any], user: UserEntity) -> Self:
+    def update(self, payload: dict[str, Any], user: 'UserEntity') -> Self:
         """Update current reminder with new data from payload."""
         now = self.generate_current_timestamp()
 
@@ -47,6 +57,6 @@ class ReminderEntity(DomainEntity):
 
         model.updated_at = now
         model.updated_by = user.id
-        model.completed_by = user.id if payload.get('is_completed') else None
+        model.completed_by = user.id if payload.get('status') == ReminderStatus.COMPLETED else self.completed_by
 
         return model

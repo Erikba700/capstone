@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User, Reminder } from '../types';
+import type { User, Reminder, ReminderStatus } from '../types';
 import { authApi } from '../api/auth';
 import { remindersApi } from '../api/reminders';
 
@@ -16,11 +16,11 @@ export interface RemindersState {
   reminders: Reminder[];
   isLoading: boolean;
   error: string | null;
-  fetchReminders: (filters?: { is_completed?: boolean }) => Promise<void>;
-  createReminder: (data: { title: string; description?: string }) => Promise<void>;
+  fetchReminders: (filters?: { status?: ReminderStatus }) => Promise<void>;
+  createReminder: (data: { title: string; description?: string; status?: ReminderStatus; scheduled_time?: string | null; user_id?: string }) => Promise<void>;
   updateReminder: (
     id: string,
-    data: { title?: string; description?: string; is_completed?: boolean }
+    data: { title?: string; description?: string; status?: ReminderStatus; scheduled_time?: string | null; user_id?: string }
   ) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
 }

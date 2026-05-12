@@ -3,7 +3,7 @@ import { useRemindersStore } from '../context/store';
 import ReminderCard from '../components/ReminderCard';
 import ReminderModal from '../components/ReminderModal';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import type { Reminder } from '../types';
+import type { Reminder, ReminderStatus } from '../types';
 import { toast } from 'react-toastify';
 import { useDarkMode } from '../hooks/useDarkMode';
 
@@ -19,7 +19,7 @@ export default function Dashboard() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
+  const [filter, setFilter] = useState<'all' | ReminderStatus>('all');
   const { isDarkMode } = useDarkMode();
 
   useEffect(() => {
@@ -33,10 +33,10 @@ export default function Dashboard() {
   const handleCreateReminder = async (data: {
     title: string;
     description?: string;
+    status?: ReminderStatus;
     scheduled_time?: string | null;
     user_id?: string;
-  }) => {
-    try {
+  }) => {    try {
       await createReminder(data);
       if (data.scheduled_time) {
         toast.success('Reminder created and scheduled for notification!');
@@ -53,6 +53,7 @@ export default function Dashboard() {
   const handleEditReminder = async (data: {
     title: string;
     description?: string;
+    status?: ReminderStatus;
     scheduled_time?: string | null;
     user_id?: string;
   }) => {
@@ -73,10 +74,10 @@ export default function Dashboard() {
     }
   };
 
-  const handleToggleComplete = async (id: string, isCompleted: boolean) => {
+  const handleToggleComplete = async (id: string, status: string) => {
     try {
-      await updateReminder(id, { is_completed: isCompleted });
-      toast.success(isCompleted ? 'Reminder completed!' : 'Reminder reopened!');
+      await updateReminder(id, { status: status as ReminderStatus });
+      toast.success(status === 'completed' ? 'Reminder completed!' : 'Reminder reopened!');
     } catch (error) {
       toast.error('Failed to update reminder');
     }
@@ -106,13 +107,14 @@ export default function Dashboard() {
   };
 
   const filteredReminders = reminders.filter((reminder: Reminder) => {
-    if (filter === 'upcoming') return !reminder.is_completed;
-    if (filter === 'completed') return reminder.is_completed;
-    return true;
+    if (filter === 'all') return true;
+    return reminder.status === filter;
   });
 
-  const upcomingCount = reminders.filter((r: Reminder) => !r.is_completed).length;
-  const completedCount = reminders.filter((r: Reminder) => r.is_completed).length;
+  const pendingCount = reminders.filter((r: Reminder) => r.status === 'pending').length;
+  const inProgressCount = reminders.filter((r: Reminder) => r.status === 'in_progress').length;
+  const completedCount = reminders.filter((r: Reminder) => r.status === 'completed').length;
+  const overdueCount = reminders.filter((r: Reminder) => r.status === 'overdue').length;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -126,7 +128,7 @@ export default function Dashboard() {
               My Reminders
             </h1>
             <p style={{ color: isDarkMode ? '#9ca3af' : '#4b5563' }}>
-              {upcomingCount} upcoming · {completedCount} completed
+              {pendingCount} pending · {inProgressCount} in progress · {completedCount} completed{overdueCount > 0 ? ` · ${overdueCount} overdue` : ''}
             </p>
           </div>
 
@@ -143,38 +145,25 @@ export default function Dashboard() {
           className="flex gap-2 mb-6 border-b"
           style={{ borderColor: isDarkMode ? '#374151' : '#e5e7eb' }}
         >
-          <button
-            onClick={() => setFilter('all')}
-            className="pb-3 px-4 font-medium transition-colors"
-            style={{
-              borderBottom: filter === 'all' ? '2px solid #0284c7' : 'none',
-              color: filter === 'all' ? '#0284c7' : (isDarkMode ? '#9ca3af' : '#4b5563')
-            }}
-          >
-            All ({reminders.length})
-          </button>
-
-          <button
-            onClick={() => setFilter('upcoming')}
-            className="pb-3 px-4 font-medium transition-colors"
-            style={{
-              borderBottom: filter === 'upcoming' ? '2px solid #0284c7' : 'none',
-              color: filter === 'upcoming' ? '#0284c7' : (isDarkMode ? '#9ca3af' : '#4b5563')
-            }}
-          >
-            Upcoming ({upcomingCount})
-          </button>
-
-          <button
-            onClick={() => setFilter('completed')}
-            className="pb-3 px-4 font-medium transition-colors"
-            style={{
-              borderBottom: filter === 'completed' ? '2px solid #0284c7' : 'none',
-              color: filter === 'completed' ? '#0284c7' : (isDarkMode ? '#9ca3af' : '#4b5563')
-            }}
-          >
-            Completed ({completedCount})
-          </button>
+          {([
+            { key: 'all', label: `All (${reminders.length})` },
+            { key: 'pending', label: `Pending (${pendingCount})` },
+            { key: 'in_progress', label: `In Progress (${inProgressCount})` },
+            { key: 'completed', label: `Completed (${completedCount})` },
+            { key: 'overdue', label: `Overdue (${overdueCount})` },
+          ] as { key: 'all' | ReminderStatus; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className="pb-3 px-4 font-medium transition-colors"
+              style={{
+                borderBottom: filter === key ? '2px solid #0284c7' : 'none',
+                color: filter === key ? '#0284c7' : (isDarkMode ? '#9ca3af' : '#4b5563'),
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Reminders List */}
@@ -189,10 +178,8 @@ export default function Dashboard() {
               style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
             >
               {filter === 'all'
-                ? 'No reminders yet. Create your first one!'
-                : filter === 'upcoming'
-                ? 'No upcoming reminders.'
-                : 'No completed reminders.'}
+            ? 'No reminders yet. Create your first one!'
+            : `No ${filter.replace('_', ' ')} reminders.`}
             </p>
           </div>
         ) : (

@@ -1,5 +1,5 @@
 import { useState, type FormEvent, useEffect } from 'react';
-import type { Reminder } from '../types';
+import type { Reminder, ReminderStatus } from '../types';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuthStore } from '../context/store';
 import { formatDateTimeWithTimezone, getMinDateTimeInTimezone } from '../utils/timezone';
@@ -10,6 +10,7 @@ interface ReminderModalProps {
   onSubmit: (data: {
     title: string;
     description?: string;
+    status?: ReminderStatus;
     scheduled_time?: string | null;
     user_id?: string;
   }) => Promise<void>;
@@ -24,6 +25,7 @@ export default function ReminderModal({
 }: ReminderModalProps) {
   const [title, setTitle] = useState(reminder?.title || '');
   const [description, setDescription] = useState(reminder?.description || '');
+  const [status, setStatus] = useState<ReminderStatus>(reminder?.status || 'pending');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [enableScheduling, setEnableScheduling] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
@@ -39,9 +41,11 @@ export default function ReminderModal({
     if (reminder) {
       setTitle(reminder.title);
       setDescription(reminder.description || '');
+      setStatus(reminder.status || 'pending');
     } else {
       setTitle('');
       setDescription('');
+      setStatus('pending');
       setEnableScheduling(false);
       setScheduledDate('');
       setScheduledTime('');
@@ -57,11 +61,13 @@ export default function ReminderModal({
       const data: {
         title: string;
         description?: string;
+        status?: ReminderStatus;
         scheduled_time?: string | null;
         user_id?: string;
       } = {
         title,
         description: description || undefined,
+        status,
       };
 
       // If scheduling is enabled and we have date/time or just want immediate notification
@@ -92,6 +98,7 @@ export default function ReminderModal({
       // Reset form
       setTitle('');
       setDescription('');
+      setStatus('pending');
       setEnableScheduling(false);
       setScheduledDate('');
       setScheduledTime('');
@@ -107,6 +114,7 @@ export default function ReminderModal({
   const handleClose = () => {
     setTitle('');
     setDescription('');
+    setStatus('pending');
     setEnableScheduling(false);
     setScheduledDate('');
     setScheduledTime('');
@@ -168,6 +176,27 @@ export default function ReminderModal({
               rows={4}
               placeholder="Enter reminder description (optional)"
             />
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor="status"
+              className="block text-sm font-medium mb-2"
+              style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+            >
+              Status
+            </label>
+            <select
+              id="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ReminderStatus)}
+              className="input-field"
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="overdue">Overdue</option>
+            </select>
           </div>
 
           {/* Scheduling Section */}
