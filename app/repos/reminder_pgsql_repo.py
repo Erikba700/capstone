@@ -9,6 +9,7 @@ from sqlalchemy.sql import Insert, Select, Update
 from app.entities.reminder import ReminderEntity
 from app.exceptions import NotFoundError
 from app.models import Reminders
+from app.models.reminder_assignees import ReminderAssignees
 
 logger = structlog.getLogger(__name__)
 
@@ -51,6 +52,16 @@ class ReminderPgsqlQueries:
         query = query.order_by(Reminders.created_at.desc())
 
         return query
+
+    @staticmethod
+    def select_reminders_assigned_to_user_query(user_id: uuid.UUID) -> Select:
+        """Select reminders assigned to a user (via reminder_assignees)."""
+        return (
+            select(Reminders)
+            .join(ReminderAssignees, ReminderAssignees.reminder_id == Reminders.id)
+            .where(ReminderAssignees.user_id == user_id)
+            .order_by(Reminders.created_at.desc())
+        )
 
 
 class ReminderPgsqlRepo:
@@ -118,6 +129,17 @@ class ReminderPgsqlRepo:
             count=len(instances),
         )
 
+        return [ReminderEntity.model_validate(instance) for instance in instances]
+
+    async def fetch_reminders_assigned_to_user(
+        self,
+        user_id: uuid.UUID,
+    ) -> list[ReminderEntity]:
+        """Fetch reminders assigned to a user (not owned by them)."""
+        query = self.queries.select_reminders_assigned_to_user_query(user_id=user_id)
+        result = await self.session.execute(query)
+        instances = result.scalars().all()
+        logger.info('Fetched reminders assigned to user', user_id=user_id, count=len(instances))
         return [ReminderEntity.model_validate(instance) for instance in instances]
 
     async def update(self, entity: ReminderEntity) -> ReminderEntity:

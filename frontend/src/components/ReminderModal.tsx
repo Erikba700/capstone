@@ -1,9 +1,10 @@
 import { useState, type FormEvent, useEffect } from 'react';
-import type { Reminder, ReminderStatus, Group } from '../types';
+import type { Reminder, ReminderStatus, Group, Friendship } from '../types';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuthStore } from '../context/store';
 import { formatDateTimeWithTimezone, getMinDateTimeInTimezone } from '../utils/timezone';
 import { groupsApi } from '../api/groups';
+import { friendsApi } from '../api/friends';
 
 interface ReminderModalProps {
   isOpen: boolean;
@@ -15,8 +16,13 @@ interface ReminderModalProps {
     scheduled_time?: string | null;
     user_id?: string;
     group_id?: string | null;
+    assignee_ids?: string[];
+    notify_assignees?: boolean;
+    assignee_scheduled_time?: string | null;
   }) => Promise<void>;
   reminder?: Reminder | null;
+  /** When true the modal is opened by an assignee, not the owner */
+  isAssigneeEdit?: boolean;
 }
 
 export default function ReminderModal({
@@ -24,6 +30,7 @@ export default function ReminderModal({
   onClose,
   onSubmit,
   reminder,
+  isAssigneeEdit = false,
 }: ReminderModalProps) {
   const [title, setTitle] = useState(reminder?.title || '');
   const [description, setDescription] = useState(reminder?.description || '');
@@ -35,6 +42,11 @@ export default function ReminderModal({
   const [notifyUser, setNotifyUser] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupId, setGroupId] = useState<string>('');
+  const [friends, setFriends] = useState<Friendship[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [notifyAssignees, setNotifyAssignees] = useState(false);
+  const [assigneeScheduledDate, setAssigneeScheduledDate] = useState('');
+  const [assigneeScheduledTime, setAssigneeScheduledTime] = useState('');
   const { isDarkMode } = useDarkMode();
   const { user } = useAuthStore();
 
@@ -44,6 +56,7 @@ export default function ReminderModal({
   useEffect(() => {
     if (isOpen) {
       groupsApi.listGroups().then(setGroups).catch(() => {});
+      friendsApi.listFriends().then(setFriends).catch(() => {});
     }
   }, [isOpen]);
 
@@ -53,6 +66,7 @@ export default function ReminderModal({
       setDescription(reminder.description || '');
       setStatus(reminder.status || 'pending');
       setGroupId(reminder.group_id || '');
+      setSelectedAssignees(reminder.assignees || []);
     } else {
       setTitle('');
       setDescription('');
@@ -62,8 +76,18 @@ export default function ReminderModal({
       setScheduledTime('');
       setNotifyUser(false);
       setGroupId('');
+      setSelectedAssignees([]);
+      setNotifyAssignees(false);
+      setAssigneeScheduledDate('');
+      setAssigneeScheduledTime('');
     }
   }, [reminder]);
+
+  const toggleAssignee = (userId: string) => {
+    setSelectedAssignees((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,12 +101,33 @@ export default function ReminderModal({
         scheduled_time?: string | null;
         user_id?: string;
         group_id?: string | null;
+        assignee_ids?: string[];
+        notify_assignees?: boolean;
+        assignee_scheduled_time?: string | null;
       } = {
         title,
         description: description || undefined,
         status,
         group_id: groupId || null,
       };
+
+      if (selectedAssignees.length > 0) {
+        data.assignee_ids = selectedAssignees;
+        data.notify_assignees = notifyAssignees;
+        if (notifyAssignees && assigneeScheduledDate && assigneeScheduledTime && user) {
+          try {
+            data.assignee_scheduled_time = formatDateTimeWithTimezone(
+              assigneeScheduledDate,
+              assigneeScheduledTime,
+              user.timezone,
+            );
+          } catch {
+            data.assignee_scheduled_time = null;
+          }
+        } else {
+          data.assignee_scheduled_time = null;
+        }
+      }
 
       // If scheduling is enabled and we have date/time or just want immediate notification
       if (enableScheduling && notifyUser && user) {
@@ -118,6 +163,10 @@ export default function ReminderModal({
       setScheduledTime('');
       setNotifyUser(false);
       setGroupId('');
+      setSelectedAssignees([]);
+      setNotifyAssignees(false);
+      setAssigneeScheduledDate('');
+      setAssigneeScheduledTime('');
       onClose();
     } catch (error) {
       console.error('Failed to save reminder:', error);
@@ -135,6 +184,10 @@ export default function ReminderModal({
     setScheduledTime('');
     setNotifyUser(false);
     setGroupId('');
+    setSelectedAssignees([]);
+    setNotifyAssignees(false);
+    setAssigneeScheduledDate('');
+    setAssigneeScheduledTime('');
     onClose();
   };
 
@@ -153,7 +206,7 @@ export default function ReminderModal({
           className="text-2l font-bold mb-4"
           style={{ color: isDarkMode ? '#f3f4f6' : '#111827' }}
         >
-          {reminder ? 'Edit Reminder' : 'Create New Reminder'}
+          {reminder ? (isAssigneeEdit ? 'Edit Assigned Reminder' : 'Edit Reminder') : 'Create New Reminder'}
         </h2>
 
         <form onSubmit={handleSubmit}>
@@ -215,7 +268,7 @@ export default function ReminderModal({
             </select>
           </div>
 
-          {groups.length > 0 && (
+          {groups.length > 0 && !isAssigneeEdit && (
             <div className="mb-4">
               <label
                 htmlFor="group"
@@ -240,7 +293,125 @@ export default function ReminderModal({
             </div>
           )}
 
+          {/* Friend Assignees */}
+          {friends.length > 0 && !isAssigneeEdit && (
+            <div className="mb-4">
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+              >
+                Assign to friends (optional)
+              </label>
+              <div
+                className="rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto"
+                style={{ backgroundColor: isDarkMode ? '#374151' : '#f3f4f6' }}
+              >
+                {friends.map((f) => {
+                  const friendId = f.other_user.id;
+                  const isSelected = selectedAssignees.includes(friendId);
+                  return (
+                    <label
+                      key={f.id}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleAssignee(friendId)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span
+                        className="text-sm"
+                        style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+                      >
+                        {f.other_user.name}
+                        <span
+                          className="ml-1 text-xs"
+                          style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
+                        >
+                          ({f.other_user.email})
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {selectedAssignees.length > 0 && (
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
+                >
+                  {selectedAssignees.length} friend{selectedAssignees.length > 1 ? 's' : ''} selected
+                </p>
+              )}
+
+              {selectedAssignees.length > 0 && (
+                <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notifyAssignees}
+                    onChange={(e) => setNotifyAssignees(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span
+                    className="text-sm"
+                    style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+                  >
+                    Notify assigned friends via email
+                  </span>
+                </label>
+              )}
+
+              {selectedAssignees.length > 0 && notifyAssignees && (
+                <div className="mt-3 space-y-2">
+                  <p
+                    className="text-xs"
+                    style={{ color: isDarkMode ? '#9ca3af' : '#6b7280' }}
+                  >
+                    Schedule notification time for assignees (leave empty to send immediately, timezone: {user?.timezone || 'UTC'}).
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label
+                        htmlFor="assigneeScheduledDate"
+                        className="block text-xs font-medium mb-1"
+                        style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+                      >
+                        Date
+                      </label>
+                      <input
+                        type="date"
+                        id="assigneeScheduledDate"
+                        value={assigneeScheduledDate}
+                        onChange={(e) => setAssigneeScheduledDate(e.target.value)}
+                        className="input-field text-sm"
+                        min={minDateTime.date}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="assigneeScheduledTime"
+                        className="block text-xs font-medium mb-1"
+                        style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+                      >
+                        Time
+                      </label>
+                      <input
+                        type="time"
+                        id="assigneeScheduledTime"
+                        value={assigneeScheduledTime}
+                        onChange={(e) => setAssigneeScheduledTime(e.target.value)}
+                        className="input-field text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Scheduling Section */}
+          {!isAssigneeEdit && (
           <div className="mb-4">
             <div className="flex items-center mb-3">
               <input
@@ -329,9 +500,10 @@ export default function ReminderModal({
                     </div>
                   </>
                 )}
-              </div>
+               </div>
             )}
           </div>
+          )} {/* end !isAssigneeEdit scheduling section */}
 
           <div className="flex justify-end gap-3">
             <button

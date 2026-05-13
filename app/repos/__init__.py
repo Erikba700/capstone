@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession as PgsqlSession
 
+from .friendship_pgsql_repo import FriendshipPgsqlRepo
 from .group_member_pgsql_repo import GroupMemberPgsqlRepo
 from .group_pgsql_repo import GroupPgsqlRepo
 from .notifications_pgsql_repo import NotificationPgsqlRepo
@@ -44,8 +45,14 @@ class RepoFactory:
         """Init PostgreSQL repo for group members."""
         return GroupMemberPgsqlRepo(self.pgsql_session)
 
+    @property
+    def friendship_pgsql_repo(self) -> FriendshipPgsqlRepo:
+        """Init PostgreSQL repo for friendships."""
+        return FriendshipPgsqlRepo(self.pgsql_session)
+
 
 __all__ = [
+    'FriendshipPgsqlRepo',
     'GroupMemberPgsqlRepo',
     'GroupPgsqlRepo',
     'NotificationPgsqlRepo',

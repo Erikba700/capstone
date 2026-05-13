@@ -42,6 +42,17 @@ export interface ReminderAssignee {
   updated_at: string;
 }
 
+export interface AssigneeDetail {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string | null;
+  assigned_by: string;
+  assigned_by_name: string | null;
+  assigned_at: string;
+  completed_at: string | null;
+}
+
 export interface Reminder {
   id: string;
   title: string;
@@ -54,6 +65,7 @@ export interface Reminder {
   notified_immediately?: boolean;
   group_id?: string | null;
   assignees?: string[];
+  assignee_details?: AssigneeDetail[];
   updated_by?: string | null;
   updated_by_name?: string | null;
 }
@@ -91,6 +103,8 @@ export interface CreateReminderRequest {
   user_id?: string;
   group_id?: string | null;
   assignee_ids?: string[];
+  notify_assignees?: boolean;
+  assignee_scheduled_time?: string | null;
 }
 
 export interface UpdateReminderRequest {
@@ -123,5 +137,39 @@ export interface UpdateGroupMemberRequest {
 
 export interface RemindersFilters {
   status?: ReminderStatus;
+}
+
+// ── Friendship types ─────────────────────────────────────────────────────────
+
+export type FriendshipStatus = 'pending' | 'accepted' | 'rejected' | 'blocked';
+
+export interface FriendUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface Friendship {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: FriendshipStatus;
+  accepted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  other_user: FriendUser;
+}
+
+export interface UserSearchItem {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface UserSearchResponse {
+  users: UserSearchItem[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 

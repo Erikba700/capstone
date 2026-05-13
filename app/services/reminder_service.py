@@ -3,6 +3,7 @@ import uuid
 import structlog
 
 from app.entities import NotificationEntity, UserEntity
+from app.entities.friendship import FriendshipStatus
 from app.entities.reminder import ReminderEntity
 from app.entities.reminder_assignee import ReminderAssigneeEntity
 from app.exceptions import BadRequestError
@@ -85,6 +86,83 @@ class ReminderService:
                 user_timezone=notification_user.timezone,
             )
 
+    async def _handle_assignee(
+        self,
+        assignee_id: uuid.UUID,
+        reminder: ReminderEntity,
+        entity: ReminderEntity,
+        schema: RemindersCreateRequestSchema,
+        owner: 'UserEntity',
+    ) -> None:
+        """Validate and create a single reminder assignee, optionally notifying them."""
+        if assignee_id != reminder.owner_id:
+            if entity.group_id is not None:
+                in_group = await self.repos.group_member_pgsql_repo.find_by_group_and_user(
+                    group_id=entity.group_id,
+                    user_id=assignee_id,
+                )
+                if in_group is None:
+                    msg = f'User {assignee_id} is not a member of the group'
+                    raise BadRequestError(msg)
+            else:
+                friendship = await self.repos.friendship_pgsql_repo.find_between_users(reminder.owner_id, assignee_id)
+                if friendship is None or friendship.status != FriendshipStatus.ACCEPTED:
+                    msg = f'User {assignee_id} is not your friend'
+                    raise BadRequestError(msg)
+
+        assignee_entity = ReminderAssigneeEntity.create_new(
+            reminder_id=reminder.id,
+            user_id=assignee_id,
+            assigned_by=reminder.owner_id,
+        )
+        await self.repos.reminder_assignee_pgsql_repo.insert(entity=assignee_entity)
+        logger.info('Created reminder assignee', user_id=assignee_id, reminder_id=reminder.id)
+
+        if assignee_id != reminder.owner_id and schema.notify_assignees:
+            assignee_user = await self.repos.user_pgsql_repo.find_by_id(assignee_id)
+            if assignee_user is not None:
+                notification_service = NotificationService(repos=self.repos)
+                from app.entities import NotificationEntity
+
+                # Convert assignee scheduled time to their timezone UTC
+                scheduled_time_utc = None
+                if schema.assignee_scheduled_time is not None:
+                    scheduled_time_utc = convert_to_utc(
+                        schema.assignee_scheduled_time,
+                        assignee_user.timezone,
+                    )
+                    logger.info(
+                        'Converted assignee scheduled time to UTC',
+                        original_time=schema.assignee_scheduled_time,
+                        utc_time=scheduled_time_utc,
+                        user_timezone=assignee_user.timezone,
+                    )
+
+                notif = NotificationEntity.create_new(
+                    user_id=assignee_id,
+                    reminder_id=reminder.id,
+                    message=f'You were assigned a reminder: {reminder.title}',
+                    creator_email=owner.email,
+                    scheduled_time=scheduled_time_utc,
+                )
+
+                if scheduled_time_utc is not None:
+                    await notification_service.create_scheduled_notification(notif)
+                    logger.info(
+                        'Scheduled assignee notification',
+                        user=assignee_user.email,
+                        utc_time=scheduled_time_utc,
+                    )
+                else:
+                    created_notif = await self.repos.notification_pgsql_repo.insert(notif)
+                    success = notification_service.send_reminder_notification(
+                        user=assignee_user,
+                        reminder=reminder,
+                        notification=created_notif,
+                    )
+                    if success:
+                        await notification_service.mark_notification_as_sent(created_notif)
+
     async def create_reminder(
         self,
         entity: ReminderEntity,
@@ -117,16 +195,15 @@ class ReminderService:
 
         await self._handle_create_notification(schema=schema, reminder=reminder, owner=owner)
 
-        # Handle group assignees
         if schema.assignee_ids:
             for assignee_id in schema.assignee_ids:
-                assignee_entity = ReminderAssigneeEntity.create_new(
-                    reminder_id=reminder.id,
-                    user_id=assignee_id,
-                    assigned_by=reminder.owner_id,
+                await self._handle_assignee(
+                    assignee_id=assignee_id,
+                    reminder=reminder,
+                    entity=entity,
+                    schema=schema,
+                    owner=owner,
                 )
-                await self.repos.reminder_assignee_pgsql_repo.insert(entity=assignee_entity)
-                logger.info('Created reminder assignee', user_id=assignee_id, reminder_id=reminder.id)
 
         return reminder
 
@@ -139,13 +216,32 @@ class ReminderService:
         owner_id: uuid.UUID,
         filters: RemindersFiltersSchema,
     ) -> list[ReminderEntity]:
-        """Fetch reminders by owner id."""
-        reminders_dict = filters.model_dump(exclude_none=True)
-        reminders = await self.repos.reminder_pgsql_repo.fetch_reminders_by_owner_id(
+        """Fetch reminders by owner id, optionally including assigned reminders."""
+        status_filters: dict = {}
+        if filters.status is not None:
+            status_filters['status'] = filters.status
+
+        owned = await self.repos.reminder_pgsql_repo.fetch_reminders_by_owner_id(
             owner_id=owner_id,
-            filters=reminders_dict,
+            filters=status_filters,
         )
-        return reminders
+
+        if not filters.include_assigned:
+            return owned
+
+        assigned = await self.repos.reminder_pgsql_repo.fetch_reminders_assigned_to_user(
+            user_id=owner_id,
+        )
+
+        # Merge deduped by id, owned first
+        seen: set[uuid.UUID] = {r.id for r in owned}
+        merged = list(owned)
+        for r in assigned:
+            if r.id not in seen and (filters.status is None or r.status == filters.status):
+                seen.add(r.id)
+                merged.append(r)
+
+        return merged
 
     async def update_reminder(
         self,
@@ -157,11 +253,33 @@ class ReminderService:
 
         If user_id is provided, validates that user exists and sends
         notification immediately if scheduled_time is None.
+        Assignees (non-owners) may only update the status field.
         """
         reminder = await self.repos.reminder_pgsql_repo.find_by_id(reminder_id=reminder_id)
         if reminder is None:
             msg = 'Reminder not found'
             raise BadRequestError(msg) from None
+
+        # If caller is not the owner, verify they're an assignee and restrict to status-only
+        from app.exceptions import AuthorizationError
+
+        if reminder.owner_id != user.id:
+            assignment = await self.repos.reminder_assignee_pgsql_repo.find_by_reminder_and_user(
+                reminder_id=reminder_id,
+                user_id=user.id,
+            )
+            if assignment is None:
+                msg = 'You are not authorized to update this reminder'
+                raise AuthorizationError(msg)
+            # Assignees may only change status
+            payload = schema.model_dump(exclude_unset=True)
+            allowed = {'status'}
+            disallowed = set(payload.keys()) - allowed
+            if disallowed:
+                msg = f'Assignees may only update the status field (got: {disallowed})'
+                raise AuthorizationError(msg)
+            updated_reminder = reminder.update(payload=payload, user=user)
+            return await self.repos.reminder_pgsql_repo.update(entity=updated_reminder)
 
         # Convert schema to dict with only fields that were actually set
         payload = schema.model_dump(exclude_unset=True)
@@ -289,6 +407,25 @@ class ReminderService:
         # Attach assignee user ids
         assignees = await self.repos.reminder_assignee_pgsql_repo.list_by_reminder_id(reminder_id=reminder.id)
         reminder_dict['assignees'] = [str(a.user_id) for a in assignees]
+
+        # Build rich assignee details
+        assignee_details = []
+        for a in assignees:
+            assignee_user = await self.repos.user_pgsql_repo.find_by_id(a.user_id)
+            assigner_user = await self.repos.user_pgsql_repo.find_by_id(a.assigned_by)
+            assignee_details.append(
+                {
+                    'id': str(a.id),
+                    'user_id': str(a.user_id),
+                    'user_name': assignee_user.name if assignee_user else None,
+                    'user_email': assignee_user.email if assignee_user else None,
+                    'assigned_by': str(a.assigned_by),
+                    'assigned_by_name': assigner_user.name if assigner_user else None,
+                    'assigned_at': a.assigned_at,
+                    'completed_at': a.completed_at,
+                }
+            )
+        reminder_dict['assignee_details'] = assignee_details
 
         # Resolve updated_by name
         reminder_dict['updated_by_name'] = None

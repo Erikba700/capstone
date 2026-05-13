@@ -4,6 +4,7 @@ import type {
   CreateReminderRequest,
   UpdateReminderRequest,
   RemindersFilters,
+  ReminderAssignee,
 } from '../types';
 
 export const remindersApi = {
@@ -28,5 +29,31 @@ export const remindersApi = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/reminders/${id}`);
   },
-};
 
+  listAssignees: async (reminderId: string): Promise<ReminderAssignee[]> => {
+    const response = await apiClient.get<ReminderAssignee[]>(
+      `/reminders/${reminderId}/assignees`
+    );
+    return response.data;
+  },
+
+  addAssignee: async (reminderId: string, userId: string): Promise<ReminderAssignee> => {
+    const response = await apiClient.post<ReminderAssignee>(
+      `/reminders/${reminderId}/assignees`,
+      { user_id: userId }
+    );
+    return response.data;
+  },
+
+  updateAssignment: async (assignmentId: string, completed: boolean): Promise<ReminderAssignee> => {
+    const response = await apiClient.patch<ReminderAssignee>(
+      `/reminder-assignments/${assignmentId}`,
+      { completed }
+    );
+    return response.data;
+  },
+
+  deleteAssignment: async (assignmentId: string): Promise<void> => {
+    await apiClient.delete(`/reminder-assignments/${assignmentId}`);
+  },
+};

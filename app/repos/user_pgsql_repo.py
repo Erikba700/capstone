@@ -1,7 +1,7 @@
 import uuid
 
 import structlog
-from sqlalchemy import exists, insert, select, update
+from sqlalchemy import exists, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Insert, Select, Update
 
@@ -39,6 +39,29 @@ class UserPgsqlQueries:
     def update_user_query(user_data: dict) -> Update:
         """Update a user."""
         return update(Users).values(**user_data).where(Users.id == user_data['id']).returning(Users)
+
+    @staticmethod
+    def search_users_query(
+        search: str,
+        exclude_id: uuid.UUID,
+        limit: int,
+        offset: int,
+    ) -> Select:
+        """Search users by name or email, excluding a specific user."""
+        pattern = f'%{search}%'
+        return (
+            select(Users)
+            .where(
+                Users.id != exclude_id,
+                or_(
+                    Users.name.ilike(pattern),
+                    Users.email.ilike(pattern),
+                ),
+            )
+            .order_by(Users.name.asc())
+            .limit(limit)
+            .offset(offset)
+        )
 
 
 class UserPgsqlRepo:
@@ -120,3 +143,21 @@ class UserPgsqlRepo:
         logger.info(f'Updated user with oid={entity.id}')
 
         return UserEntity.model_validate(instance)
+
+    async def search(
+        self,
+        search: str,
+        exclude_id: uuid.UUID,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> list[UserEntity]:
+        """Search users by name or email, excluding a specific user."""
+        offset = (page - 1) * page_size
+        query = self.queries.search_users_query(
+            search=search,
+            exclude_id=exclude_id,
+            limit=page_size,
+            offset=offset,
+        )
+        result = await self.session.execute(query)
+        return [UserEntity.model_validate(i) for i in result.scalars().all()]

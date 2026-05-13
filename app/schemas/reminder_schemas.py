@@ -7,6 +7,19 @@ from app.entities.reminder import ReminderStatus
 from app.schemas.base_schemas import BaseSchema
 
 
+class AssigneeInfoSchema(BaseSchema):
+    """Minimal assignee info embedded in reminder responses."""
+
+    id: uuid.UUID  # assignment id
+    user_id: uuid.UUID
+    user_name: str | None = None
+    user_email: str | None = None
+    assigned_by: uuid.UUID
+    assigned_by_name: str | None = None
+    assigned_at: AwareDatetime
+    completed_at: AwareDatetime | None = None
+
+
 class RemindersCreateRequestSchema(BaseSchema):
     """Schema for creating a new reminder."""
 
@@ -17,6 +30,8 @@ class RemindersCreateRequestSchema(BaseSchema):
     user_id: uuid.UUID | None = None
     group_id: uuid.UUID | None = None
     assignee_ids: list[uuid.UUID] | None = None
+    notify_assignees: bool = False
+    assignee_scheduled_time: AwareDatetime | None = None
 
     @model_validator(mode='after')
     def validate_scheduled_time_requires_user_id(self) -> Self:
@@ -43,6 +58,7 @@ class RemindersResponseSchema(BaseSchema):
     scheduled_time: AwareDatetime | None = None
     notified_immediately: bool = False
     assignees: list[uuid.UUID] = []  # noqa: RUF012
+    assignee_details: list[AssigneeInfoSchema] = []  # noqa: RUF012
 
 
 class RemindersListResponseSchema(BaseSchema):
@@ -55,6 +71,7 @@ class RemindersFiltersSchema(BaseSchema):
     """Schema for filtering reminders."""
 
     status: ReminderStatus | None = None
+    include_assigned: bool = True
 
 
 class RemindersUpdateRequestSchema(BaseSchema):

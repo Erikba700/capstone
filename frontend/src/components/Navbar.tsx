@@ -38,6 +38,14 @@ export default function Navbar() {
                 Groups
               </Link>
 
+              <Link
+                to="/friends"
+                className="hover:text-primary-600"
+                style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
+              >
+                Friends
+              </Link>
+
               <button
                 onClick={toggleDarkMode}
                 className="p-2 rounded-lg hover:bg-gray-100"

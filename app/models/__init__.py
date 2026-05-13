@@ -1,4 +1,5 @@
 from .base import DomainSqlModel, SqlModel, metadata
+from .friendships import Friendships
 from .group_members import GroupMembers
 from .groups import Groups
 from .notification_recipients import NotificationRecipients
@@ -8,6 +9,7 @@ from .users import Users
 
 __all__ = [
     'DomainSqlModel',
+    'Friendships',
     'GroupMembers',
     'Groups',
     'NotificationRecipients',

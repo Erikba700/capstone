@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.dependencies import get_current_user, get_repo, get_shared_tx_repo
 from app.entities import UserEntity
+from app.entities.friendship import FriendshipStatus
 from app.entities.reminder_assignee import ReminderAssigneeEntity
 from app.exceptions import AuthorizationError, NotFoundError
 from app.repos import RepoFactory
@@ -57,6 +58,15 @@ async def add_assignee(
     elif reminder.owner_id != user.id:
         msg = 'Only the reminder owner can add assignees'
         raise AuthorizationError(msg)
+    elif schema.user_id != user.id:
+        # Personal reminder: assignee must be an accepted friend (or self)
+        friendship = await repos.friendship_pgsql_repo.find_between_users(
+            user_a=user.id,
+            user_b=schema.user_id,
+        )
+        if friendship is None or friendship.status != FriendshipStatus.ACCEPTED:
+            msg = 'You can only assign personal reminders to accepted friends'
+            raise AuthorizationError(msg)
 
     entity = ReminderAssigneeEntity.create_new(
         reminder_id=reminder_id,
