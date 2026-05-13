@@ -131,6 +131,18 @@ class GroupService:
         """List all members of a group."""
         return await self.repos.group_member_pgsql_repo.list_by_group_id(group_id=group_id)
 
+    async def enrich_member(self, member: GroupMembersEntity) -> dict:
+        """Enrich a membership record with the member's name and email."""
+        data = member.model_dump()
+        user = await self.repos.user_pgsql_repo.find_by_id(member.user_id)
+        data['user_name'] = user.name if user else 'Unknown'
+        data['user_email'] = user.email if user else ''
+        return data
+
+    async def enrich_members(self, members: list[GroupMembersEntity]) -> list[dict]:
+        """Enrich multiple membership records with user details."""
+        return [await self.enrich_member(m) for m in members]
+
     async def add_member(
         self,
         group_id: uuid.UUID,

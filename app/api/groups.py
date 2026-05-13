@@ -107,11 +107,12 @@ async def list_members(
     group_id: uuid.UUID,
     user: Annotated[UserEntity, Depends(get_current_user)],
     repos: Annotated[RepoFactory, Depends(get_repo)],
-) -> object:
+) -> list[dict]:
     """List members of a group. Caller must be a member."""
     service = GroupService(repos=repos)
     await service.require_membership(group_id=group_id, user_id=user.id)
-    return await service.list_members(group_id=group_id)
+    members = await service.list_members(group_id=group_id)
+    return await service.enrich_members(members)
 
 
 @router.post(
@@ -124,7 +125,7 @@ async def add_member(
     schema: GroupMemberAddRequestSchema,
     user: Annotated[UserEntity, Depends(get_current_user)],
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
-) -> object:
+) -> dict:
     """Add a user to a group by email. Requires admin or owner."""
     service = GroupService(repos=repos)
     await service.require_admin(group_id=group_id, user_id=user.id)
@@ -135,11 +136,12 @@ async def add_member(
         msg = f'User with email {schema.email} not found'
         raise BadRequestError(msg)
 
-    return await service.add_member(
+    member = await service.add_member(
         group_id=group_id,
         user_id=target_user.id,
         role=schema.role,
     )
+    return await service.enrich_member(member)
 
 
 @router.patch('/groups/{group_id}/members/{target_user_id}', response_model=GroupMemberResponseSchema)
@@ -149,16 +151,17 @@ async def update_member_role(
     schema: GroupMemberUpdateRequestSchema,
     user: Annotated[UserEntity, Depends(get_current_user)],
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
-) -> object:
+) -> dict:
     """Change a member's role. Requires admin or owner."""
     service = GroupService(repos=repos)
     actor_membership = await service.require_admin(group_id=group_id, user_id=user.id)
-    return await service.update_member_role(
+    member = await service.update_member_role(
         group_id=group_id,
         target_user_id=target_user_id,
         new_role=schema.role,
         actor_role=actor_membership.role,
     )
+    return await service.enrich_member(member)
 
 
 @router.delete('/groups/{group_id}/members/{target_user_id}', status_code=status.HTTP_204_NO_CONTENT)

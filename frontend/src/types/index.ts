@@ -22,6 +22,8 @@ export interface Group {
 export interface GroupMember {
   id: string;
   user_id: string;
+  user_name: string;
+  user_email: string;
   group_id: string;
   role: MemberRole;
   joined_at: string;

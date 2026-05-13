@@ -36,6 +36,8 @@ class GroupMemberResponseSchema(BaseSchema):
 
     id: uuid.UUID
     user_id: uuid.UUID
+    user_name: str
+    user_email: str
     group_id: uuid.UUID
     role: MemberRoles
     joined_at: AwareDatetime
