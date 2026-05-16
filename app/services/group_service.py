@@ -2,11 +2,13 @@ import uuid
 
 import structlog
 
+from app.config import settings
 from app.entities.group import GroupEntity
 from app.entities.group_members import GroupMembersEntity, MemberRoles
 from app.exceptions import AuthorizationError, BadRequestError, NotFoundError
 from app.repos import RepoFactory
 from app.schemas.group_schemas import GroupCreateRequestSchema, GroupUpdateRequestSchema
+from app.services.notification_providers import EmailNotificationProvider
 
 logger = structlog.getLogger(__name__)
 
@@ -212,3 +214,71 @@ class GroupService:
             raise AuthorizationError(msg)
 
         await self.repos.group_member_pgsql_repo.delete_by_id(member_id=target.id)
+
+    def send_group_invitation(
+        self,
+        group_name: str,
+        inviter_name: str,
+        inviter_email: str,
+        recipient_email: str,
+    ) -> bool:
+        """Send an email invitation to a non-registered user to join the group.
+
+        The email contains a sign-up link pointing to the frontend registration page.
+        Returns True if the email was sent successfully.
+        """
+        signup_url = f'{settings.frontend_url}/signup'
+        subject = f'You\'ve been invited to join "{group_name}" on Remindly'
+        html_body = f"""
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #0284c7;">You've been invited! 🎉</h2>
+  <p>Hi there,</p>
+  <p>
+    <strong>{inviter_name}</strong> (<a href="mailto:{inviter_email}">{inviter_email}</a>)
+    has invited you to join the group <strong>"{group_name}"</strong> on <strong>Remindly</strong>
+    — a collaborative reminder and task management app.
+  </p>
+  <p>To accept the invitation, create a free account using the button below:</p>
+  <p style="text-align: center; margin: 32px 0;">
+    <a href="{signup_url}"
+       style="background-color: #0284c7; color: white; padding: 12px 28px;
+              text-decoration: none; border-radius: 6px; font-size: 16px;">
+      Create My Account
+    </a>
+  </p>
+  <p style="color: #6b7280; font-size: 13px;">
+    Or copy this link into your browser:<br>
+    <a href="{signup_url}" style="color: #0284c7;">{signup_url}</a>
+  </p>
+  <p style="color: #6b7280; font-size: 12px; margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+    Once registered, ask <strong>{inviter_name}</strong> to add you to the group, or share
+    your registered email with them.<br>
+    If you were not expecting this invitation you can safely ignore this email.
+  </p>
+</body>
+</html>
+"""
+        text_body = (
+            f'Hi,\n\n'
+            f'{inviter_name} ({inviter_email}) has invited you to join the group '
+            f'"{group_name}" on Remindly.\n\n'
+            f'Create a free account here: {signup_url}\n\n'
+            f'Once registered, ask {inviter_name} to add you to the group.\n\n'
+            f'If you were not expecting this invitation you can safely ignore this email.'
+        )
+        provider = EmailNotificationProvider(
+            sender_email=settings.email_address,
+            sender_password=settings.email_password,
+        )
+        success = provider.send(
+            recipient=recipient_email,
+            subject=subject,
+            message=text_body,
+            html_content=html_body,
+        )
+        if success:
+            logger.info('Group invitation email sent', recipient=recipient_email, group=group_name)
+        else:
+            logger.error('Failed to send group invitation email', recipient=recipient_email)
+        return success

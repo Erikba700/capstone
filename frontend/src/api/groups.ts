@@ -12,6 +12,7 @@ import type {
   GroupNotifyRequest,
   GroupReminderUpdateRequest,
   NotifyCountResponse,
+  UserSearchResponse,
 } from '../types';
 
 export const groupsApi = {
@@ -73,9 +74,35 @@ export const groupsApi = {
     return res.data.reminders;
   },
 
+  /** Search users to invite to a group (ilike, excludes current members) */
+  searchUsersForGroup: async (
+    groupId: string,
+    search: string,
+    page = 1,
+    pageSize = 20,
+  ): Promise<UserSearchResponse> => {
+    const res = await apiClient.get<UserSearchResponse>(
+      `/groups/${groupId}/members/search`,
+      { params: { search, page, page_size: pageSize } },
+    );
+    return res.data;
+  },
+
+  /** Send email invitation to a non-registered user */
+  inviteMemberByEmail: async (
+    groupId: string,
+    email: string,
+    role: string = 'member',
+  ): Promise<{ invited_email: string; message: string }> => {
+    const res = await apiClient.post<{ invited_email: string; message: string }>(
+      `/groups/${groupId}/members/invite`,
+      { email, role },
+    );
+    return res.data;
+  },
+
   // Reminder assignees (legacy)
-  listAssignees: async (reminderId: string): Promise<ReminderAssignee[]> => {
-    const res = await apiClient.get<ReminderAssignee[]>(`/reminders/${reminderId}/assignees`);
+  listAssignees: async (reminderId: string): Promise<ReminderAssignee[]> => {    const res = await apiClient.get<ReminderAssignee[]>(`/reminders/${reminderId}/assignees`);
     return res.data;
   },
 

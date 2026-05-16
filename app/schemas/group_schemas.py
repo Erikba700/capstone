@@ -52,6 +52,20 @@ class GroupMemberAddRequestSchema(BaseSchema):
     role: MemberRoles = MemberRoles.MEMBER
 
 
+class GroupInviteRequestSchema(BaseSchema):
+    """Schema for inviting a non-registered user to a group by email."""
+
+    email: str
+    role: MemberRoles = MemberRoles.MEMBER
+
+
+class GroupInviteResponseSchema(BaseSchema):
+    """Response for a group invitation email dispatch."""
+
+    invited_email: str
+    message: str
+
+
 class GroupMemberUpdateRequestSchema(BaseSchema):
     """Schema for updating a group member role."""
 

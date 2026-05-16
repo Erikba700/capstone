@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { groupsApi } from '../api/groups';
 import { remindersApi } from '../api/reminders';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuthStore } from '../context/store';
-import type { Group, GroupMember, MemberRole, Reminder, ReminderStatus } from '../types';
+import type { Group, GroupMember, MemberRole, Reminder, ReminderStatus, UserSearchItem } from '../types';
 
 const ROLE_LABELS: Record<MemberRole, string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 
@@ -39,7 +39,6 @@ function ReminderForm({ members, groupId, initial, onSave, onCancel, isDarkMode 
   const [status, setStatus] = useState<ReminderStatus>(initial?.status ?? 'pending');
   const [assigneeIds, setAssigneeIds] = useState<string[]>(initial?.assignees ?? []);
   const [notifyAssignees, setNotifyAssignees] = useState(false);
-  const [scheduledTime, setScheduledTime] = useState('');
   const [assigneeScheduledTime, setAssigneeScheduledTime] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -550,9 +549,18 @@ export default function GroupDetail() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [addEmail, setAddEmail] = useState('');
+  // Member add — live search
+  const [addSearch, setAddSearch] = useState('');
   const [addRole, setAddRole] = useState<MemberRole>('member');
   const [addingMember, setAddingMember] = useState(false);
+  const [searchResults, setSearchResults] = useState<UserSearchItem[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  // Invite dialog
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const cardBg = isDarkMode ? '#1f2937' : '#ffffff';
   const textColor = isDarkMode ? '#f9fafb' : '#111827';
@@ -597,15 +605,74 @@ export default function GroupDetail() {
     catch { toast.error('Failed to delete group'); }
   };
 
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!groupId || !addEmail.trim()) return;
+  const handleAddMember = async (selectedUser: UserSearchItem) => {
+    if (!groupId) return;
     setAddingMember(true);
+    setShowDropdown(false);
+    setAddSearch('');
+    setSearchResults([]);
     try {
-      const member = await groupsApi.addMember(groupId, { email: addEmail.trim(), role: addRole });
-      setMembers([...members, member]); setAddEmail(''); toast.success('Member added');
-    } catch { toast.error('Failed to add member'); }
-    finally { setAddingMember(false); }
+      const member = await groupsApi.addMember(groupId, { email: selectedUser.email, role: addRole });
+      setMembers([...members, member]);
+      toast.success('Member added');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to add member');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  // Live search as user types in the add-member field
+  const handleSearchChange = useCallback(async (value: string) => {
+    setAddSearch(value);
+    if (!groupId || value.trim().length < 1) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setSearchLoading(true);
+    setShowDropdown(true); // show dropdown immediately so invite button can appear
+    try {
+      const res = await groupsApi.searchUsersForGroup(groupId, value.trim());
+      setSearchResults(res.users);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [groupId]);
+
+  // When user blurs and no result found, and value looks like email — offer invite
+  const handleSearchBlur = useCallback(() => {
+    // Delay so click on dropdown items still fires
+    setTimeout(() => {
+      setShowDropdown(false);
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (
+        addSearch.trim() &&
+        searchResults.length === 0 &&
+        emailRe.test(addSearch.trim())
+      ) {
+        setInviteEmail(addSearch.trim());
+        setShowInviteDialog(true);
+      }
+    }, 200);
+  }, [addSearch, searchResults]);
+
+  const handleSendInvite = async () => {
+    if (!groupId || !inviteEmail) return;
+    setInviting(true);
+    try {
+      const result = await groupsApi.inviteMemberByEmail(groupId, inviteEmail, addRole);
+      toast.success(result.message);
+      setShowInviteDialog(false);
+      setInviteEmail('');
+      setAddSearch('');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to send invitation');
+    } finally {
+      setInviting(false);
+    }
   };
 
   const handleRoleChange = async (memberId: string, userId: string, role: MemberRole) => {
@@ -735,15 +802,100 @@ export default function GroupDetail() {
       <div className="rounded-xl shadow p-4" style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}` }}>
         <h2 className="font-semibold text-lg mb-4" style={{ color: textColor }}>Members ({members.length})</h2>
         {isAdminOrOwner && (
-          <form onSubmit={handleAddMember} className="flex gap-2 mb-4 flex-wrap">
-            <input className="flex-1 min-w-48 px-3 py-2 rounded border" style={{ backgroundColor: inputBg, color: textColor, borderColor }} placeholder="Email address" value={addEmail} onChange={e => setAddEmail(e.target.value)} type="email" required />
-            <select className="px-3 py-2 rounded border" style={{ backgroundColor: inputBg, color: textColor, borderColor }} value={addRole} onChange={e => setAddRole(e.target.value as MemberRole)}>
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button type="submit" disabled={addingMember} className="px-4 py-2 rounded text-white font-medium" style={{ backgroundColor: '#0284c7', opacity: addingMember ? 0.7 : 1 }}>Add</button>
-          </form>
+          <div className="mb-4">
+            {/* Live user search + role select */}
+            <div className="flex gap-2 flex-wrap items-start">
+              <div className="flex-1 min-w-48 relative" ref={searchRef}>
+                <input
+                  className="w-full px-3 py-2 rounded border text-sm"
+                  style={{ backgroundColor: inputBg, color: textColor, borderColor }}
+                  placeholder="Search by name or email…"
+                  value={addSearch}
+                  onChange={e => handleSearchChange(e.target.value)}
+                  onBlur={handleSearchBlur}
+                  onFocus={() => addSearch.length > 0 && searchResults.length > 0 && setShowDropdown(true)}
+                  autoComplete="off"
+                />
+                {/* Dropdown results */}
+                {showDropdown && (
+                  <div
+                    className="absolute left-0 right-0 top-full mt-1 rounded-lg shadow-lg z-50 overflow-hidden"
+                    style={{ backgroundColor: cardBg, border: `1px solid ${borderColor}` }}
+                  >
+                    {searchLoading ? (
+                      <p className="px-3 py-2 text-xs" style={{ color: subText }}>Searching…</p>
+                    ) : searchResults.length === 0 ? (
+                      <p className="px-3 py-2 text-xs" style={{ color: subText }}>
+                        No users found. Enter a full email to send an invitation.
+                      </p>
+                    ) : (
+                      searchResults.map(u => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-opacity-60 transition-colors"
+                          style={{ color: textColor }}
+                          onMouseDown={() => handleAddMember(u)}
+                        >
+                          <span className="font-medium">{u.name}</span>
+                          <span className="ml-2 text-xs" style={{ color: subText }}>{u.email}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              <select
+                className="px-3 py-2 rounded border text-sm"
+                style={{ backgroundColor: inputBg, color: textColor, borderColor }}
+                value={addRole}
+                onChange={e => setAddRole(e.target.value as MemberRole)}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+              {addingMember && (
+                <span className="px-3 py-2 text-xs" style={{ color: subText }}>Adding…</span>
+              )}
+            </div>
+            <p className="text-xs mt-1" style={{ color: subText }}>
+              Type a name or email. If the person isn't registered yet, enter their exact email to send an invitation.
+            </p>
+          </div>
         )}
+
+        {/* Invite dialog */}
+        {showInviteDialog && (
+          <div
+            className="rounded-lg p-4 mb-4 space-y-3"
+            style={{ backgroundColor: isDarkMode ? '#1e3a5f' : '#eff6ff', border: `1px solid #93c5fd` }}
+          >
+            <p className="text-sm font-medium" style={{ color: textColor }}>
+              👤 <strong>{inviteEmail}</strong> is not registered on Remind-LY yet.
+            </p>
+            <p className="text-sm" style={{ color: subText }}>
+              Would you like to send them an invitation email with a sign-up link?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSendInvite}
+                disabled={inviting}
+                className="px-4 py-1.5 rounded text-white text-sm font-medium"
+                style={{ backgroundColor: '#0284c7', opacity: inviting ? 0.7 : 1 }}
+              >
+                {inviting ? 'Sending…' : '✉️ Send Invitation'}
+              </button>
+              <button
+                onClick={() => { setShowInviteDialog(false); setInviteEmail(''); setAddSearch(''); }}
+                className="px-4 py-1.5 rounded text-sm"
+                style={{ backgroundColor: isDarkMode ? '#374151' : '#e5e7eb', color: textColor }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="divide-y" style={{ borderColor }}>
           {members.map(member => (
             <div key={member.id} className="flex items-center justify-between py-3">
@@ -776,4 +928,3 @@ export default function GroupDetail() {
     </div>
   );
 }
-

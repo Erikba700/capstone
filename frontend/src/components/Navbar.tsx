@@ -17,7 +17,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="text-xl font-bold text-primary-600" style={{ color: '#0284c7' }}>
-            Reminder App
+            Remind-LY
           </Link>
 
           {user && (
