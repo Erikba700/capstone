@@ -107,10 +107,12 @@ async def update_reminder(
 @router.delete('/reminders/{reminder_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_reminder(
     reminder_id: uuid.UUID,
+    user: Annotated[UserEntity, Depends(get_current_user)],
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
 ) -> None:
     """Delete a reminder by id."""
     service = ReminderService(repos=repos)
     await service.delete_reminder_by_id(
         reminder_id=reminder_id,
+        caller=user,
     )

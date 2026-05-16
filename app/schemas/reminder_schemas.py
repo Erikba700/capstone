@@ -74,6 +74,44 @@ class RemindersFiltersSchema(BaseSchema):
     include_assigned: bool = True
 
 
+# ── Group reminder collaboration schemas ─────────────────────────────────────
+
+
+class GroupAssignRequestSchema(BaseSchema):
+    """Schema for assigning a group member to a reminder (admin/owner)."""
+
+    user_id: uuid.UUID
+    notify: bool = True
+    notify_previous: bool = False
+    scheduled_time: AwareDatetime | None = None
+
+
+class GroupNotifyRequestSchema(BaseSchema):
+    """Schema for notification-related group reminder actions."""
+
+    message: str | None = None
+    notify_previous: bool = False
+    scheduled_time: AwareDatetime | None = None
+
+
+class GroupReminderUpdateRequestSchema(BaseSchema):
+    """Schema for collaborative group reminder updates with role-based access."""
+
+    title: str | None = None
+    description: str | None = None
+    status: ReminderStatus | None = None
+    notify_assignees_on_update: bool = False
+    assignee_ids: list[uuid.UUID] | None = None
+    notify_assignees: bool = False
+    assignee_scheduled_time: AwareDatetime | None = None
+
+
+class NotifyCountResponseSchema(BaseSchema):
+    """Response schema for notification endpoints."""
+
+    notified: int
+
+
 class RemindersUpdateRequestSchema(BaseSchema):
     """Schema for updating a reminder."""
 
@@ -83,6 +121,9 @@ class RemindersUpdateRequestSchema(BaseSchema):
     owner_id: uuid.UUID | None = None
     scheduled_time: AwareDatetime | None = None
     user_id: uuid.UUID | None = None
+    assignee_ids: list[uuid.UUID] | None = None
+    notify_assignees: bool = False
+    assignee_scheduled_time: AwareDatetime | None = None
 
     @model_validator(mode='after')
     def validate_scheduled_time_requires_user_id(self) -> Self:

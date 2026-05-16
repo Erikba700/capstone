@@ -107,6 +107,35 @@ export interface CreateReminderRequest {
   assignee_scheduled_time?: string | null;
 }
 
+// ── Group reminder collaboration ──────────────────────────────────────────────
+
+export interface GroupAssignRequest {
+  user_id: string;
+  notify?: boolean;
+  notify_previous?: boolean;
+  scheduled_time?: string;
+}
+
+export interface GroupNotifyRequest {
+  message?: string;
+  notify_previous?: boolean;
+  scheduled_time?: string;
+}
+
+export interface GroupReminderUpdateRequest {
+  title?: string;
+  description?: string;
+  status?: ReminderStatus;
+  notify_assignees_on_update?: boolean;
+  assignee_ids?: string[];
+  notify_assignees?: boolean;
+  assignee_scheduled_time?: string | null;
+}
+
+export interface NotifyCountResponse {
+  notified: number;
+}
+
 export interface UpdateReminderRequest {
   title?: string;
   description?: string;
@@ -114,6 +143,9 @@ export interface UpdateReminderRequest {
   scheduled_time?: string | null;
   user_id?: string;
   group_id?: string | null;
+  assignee_ids?: string[];
+  notify_assignees?: boolean;
+  assignee_scheduled_time?: string | null;
 }
 
 export interface CreateGroupRequest {

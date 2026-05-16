@@ -8,6 +8,10 @@ import type {
   UpdateGroupRequest,
   AddGroupMemberRequest,
   UpdateGroupMemberRequest,
+  GroupAssignRequest,
+  GroupNotifyRequest,
+  GroupReminderUpdateRequest,
+  NotifyCountResponse,
 } from '../types';
 
 export const groupsApi = {
@@ -69,7 +73,7 @@ export const groupsApi = {
     return res.data.reminders;
   },
 
-  // Reminder assignees
+  // Reminder assignees (legacy)
   listAssignees: async (reminderId: string): Promise<ReminderAssignee[]> => {
     const res = await apiClient.get<ReminderAssignee[]>(`/reminders/${reminderId}/assignees`);
     return res.data;
@@ -92,8 +96,36 @@ export const groupsApi = {
   removeAssignee: async (assignmentId: string): Promise<void> => {
     await apiClient.delete(`/reminder-assignments/${assignmentId}`);
   },
+
+  // ── Group reminder collaboration ─────────────────────────────────────────
+
+  /** Admin/owner assign a group member to a reminder */
+  assignMember: async (reminderId: string, data: GroupAssignRequest): Promise<Reminder> => {
+    const res = await apiClient.post<Reminder>(`/reminders/${reminderId}/assign`, data);
+    return res.data;
+  },
+
+  /** Any group member self-assigns (Assign to me) */
+  assignToMe: async (reminderId: string, data: GroupNotifyRequest = {}): Promise<Reminder> => {
+    const res = await apiClient.post<Reminder>(`/reminders/${reminderId}/assign-to-me`, data);
+    return res.data;
+  },
+
+  /** Notify current assignees */
+  notifyAssignees: async (reminderId: string, data: GroupNotifyRequest = {}): Promise<NotifyCountResponse> => {
+    const res = await apiClient.post<NotifyCountResponse>(`/reminders/${reminderId}/notify`, data);
+    return res.data;
+  },
+
+  /** Admin/owner notify all group members */
+  notifyAll: async (reminderId: string, data: GroupNotifyRequest = {}): Promise<NotifyCountResponse> => {
+    const res = await apiClient.post<NotifyCountResponse>(`/reminders/${reminderId}/notify-all`, data);
+    return res.data;
+  },
+
+  /** Collaborative update with role-based access */
+  updateGroupReminder: async (reminderId: string, data: GroupReminderUpdateRequest): Promise<Reminder> => {
+    const res = await apiClient.patch<Reminder>(`/reminders/${reminderId}/group-update`, data);
+    return res.data;
+  },
 };
-
-
-
-

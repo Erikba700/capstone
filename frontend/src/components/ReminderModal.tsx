@@ -111,7 +111,8 @@ export default function ReminderModal({
         group_id: groupId || null,
       };
 
-      if (selectedAssignees.length > 0) {
+      if (reminder || selectedAssignees.length > 0) {
+        // Always send assignee_ids when editing (so removals are applied) or when new ones are selected
         data.assignee_ids = selectedAssignees;
         data.notify_assignees = notifyAssignees;
         if (notifyAssignees && assigneeScheduledDate && assigneeScheduledTime && user) {
