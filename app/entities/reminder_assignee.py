@@ -12,6 +12,7 @@ class ReminderAssigneeEntity(DomainEntity):
     user_id: uuid.UUID
     assigned_by: uuid.UUID
     assigned_at: datetime
+    acknowledged_at: datetime | None = None
     completed_at: datetime | None = None
 
     @classmethod
@@ -32,8 +33,14 @@ class ReminderAssigneeEntity(DomainEntity):
             user_id=user_id,
             assigned_by=assigned_by,
             assigned_at=now,
+            acknowledged_at=None,
             completed_at=None,
         )
+
+    def acknowledge(self) -> 'ReminderAssigneeEntity':
+        """Mark this assignment as acknowledged (seen) by setting acknowledged_at."""
+        now = self.generate_current_timestamp()
+        return self.model_copy(update={'acknowledged_at': now, 'updated_at': now})
 
     def complete(self) -> 'ReminderAssigneeEntity':
         """Mark this assignment as completed by setting completed_at."""

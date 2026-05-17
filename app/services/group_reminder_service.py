@@ -165,6 +165,7 @@ class GroupReminderService:
                     message=f'You were assigned to "{reminder.title}" by {assigner_user.name}',
                     creator_email=assigner_user.email,
                     scheduled_time=scheduled_time,
+                    assignment_id=assignment.id,
                 )
 
         return assignment
@@ -290,8 +291,13 @@ class GroupReminderService:
         message: str,
         creator_email: str,
         scheduled_time: dt | None = None,
+        assignment_id: uuid.UUID | None = None,
     ) -> None:
-        """Create and send a notification — immediate or scheduled."""
+        """Create and send a notification — immediate or scheduled.
+
+        If assignment_id is provided and the notification is immediate, sends
+        the HTML email with acknowledge/complete action buttons.
+        """
         notification = NotificationEntity.create_new(
             user_id=user.id,
             reminder_id=reminder.id,
@@ -305,11 +311,19 @@ class GroupReminderService:
             await notification_service.create_scheduled_notification(created)
             logger.info('Scheduled group notification', user_id=user.id, reminder_id=reminder.id, at=scheduled_time)
         else:
-            success = notification_service.send_reminder_notification(
-                user=user,
-                reminder=reminder,
-                notification=created,
-            )
+            if assignment_id is not None:
+                success = notification_service.send_reminder_notification_with_actions(
+                    user=user,
+                    reminder=reminder,
+                    notification=created,
+                    assignment_id=assignment_id,
+                )
+            else:
+                success = notification_service.send_reminder_notification(
+                    user=user,
+                    reminder=reminder,
+                    notification=created,
+                )
             if success:
                 await notification_service.mark_notification_as_sent(created)
                 logger.info('Sent group notification', user_id=user.id, reminder_id=reminder.id)

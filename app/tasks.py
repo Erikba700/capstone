@@ -94,12 +94,25 @@ async def _send_scheduled_notifications_async() -> dict:
                     failed_count += 1
                     continue
 
-                # Send the notification
-                success = notification_service.send_reminder_notification(
-                    user=user,
-                    reminder=reminder,
-                    notification=notification,
+                # Send the notification (with action buttons if there's an assignment)
+                assignment = await repos.reminder_assignee_pgsql_repo.find_by_reminder_and_user(
+                    reminder_id=notification.reminder_id,
+                    user_id=notification.user_id,
                 )
+
+                if assignment is not None:
+                    success = notification_service.send_reminder_notification_with_actions(
+                        user=user,
+                        reminder=reminder,
+                        notification=notification,
+                        assignment_id=assignment.id,
+                    )
+                else:
+                    success = notification_service.send_reminder_notification(
+                        user=user,
+                        reminder=reminder,
+                        notification=notification,
+                    )
 
                 if success:
                     # Mark as sent
@@ -208,11 +221,25 @@ async def _send_immediate_notification_async(
         user = cast(UserEntity, user)
         reminder = cast(ReminderEntity, reminder)
         notification = cast(NotificationEntity, notification)
-        success = notification_service.send_reminder_notification(
-            user=user,
-            reminder=reminder,
-            notification=notification,
+
+        # Send with action buttons if there's a reminder assignment for this user
+        assignment = await repos.reminder_assignee_pgsql_repo.find_by_reminder_and_user(
+            reminder_id=reminder.id,
+            user_id=user.id,
         )
+        if assignment is not None:
+            success = notification_service.send_reminder_notification_with_actions(
+                user=user,
+                reminder=reminder,
+                notification=notification,
+                assignment_id=assignment.id,
+            )
+        else:
+            success = notification_service.send_reminder_notification(
+                user=user,
+                reminder=reminder,
+                notification=notification,
+            )
 
         if success:
             # Mark as sent

@@ -20,6 +20,7 @@ services:
       EMAIL_PASSWORD: ${EMAIL_PASSWORD}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-your-secret-key-change-in-production}
       JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY:-your-refresh-secret-key}
+      BACKEND_URL: http://localhost:8000/api
     depends_on:
       postgres_capstone:
         condition: service_healthy

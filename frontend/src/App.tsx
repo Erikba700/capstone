@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
 import Friends from './pages/Friends';
+import ReminderCallback from './pages/ReminderCallback';
 import { useDarkMode } from './hooks/useDarkMode';
 
 function App() {
@@ -97,6 +98,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/reminder-callback" element={<ReminderCallback />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

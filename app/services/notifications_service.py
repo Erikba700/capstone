@@ -291,7 +291,7 @@ class NotificationService:
         self,
         notification: NotificationEntity,
     ) -> NotificationEntity:
-        """Mark a notification as read.
+        """Mark a notification as read by setting is_read_at timestamp.
 
         Args:
             notification: Notification entity to update
@@ -299,10 +299,111 @@ class NotificationService:
         Returns:
             Updated notification entity
         """
-        updated_notification = notification.update({'is_read': True})
+        updated_notification = notification.update({'is_read_at': get_utc_now()})
         updated_notification = await self.repos.notification_pgsql_repo.update(entity=updated_notification)
         logger.info(f'Notification {notification.id} marked as read')
         return updated_notification
+
+    def send_reminder_notification_with_actions(
+        self,
+        user: 'UserEntity',
+        reminder: 'ReminderEntity',
+        notification: NotificationEntity,
+        assignment_id: 'uuid.UUID',
+    ) -> bool:
+        """Send a reminder notification with acknowledge/complete action buttons.
+
+        Generates secure signed tokens and includes clickable links in the email HTML.
+
+        Args:
+            user: User to notify
+            reminder: Reminder that triggered the notification
+            notification: Notification entity with details
+            assignment_id: UUID of the reminder assignment (for callback tokens)
+
+        Returns:
+            True if notification was sent successfully, False otherwise
+        """
+        from app.utils.callback_tokens import generate_callback_token
+
+        ack_token = generate_callback_token(assignment_id, user.id, 'acknowledge')
+        complete_token = generate_callback_token(assignment_id, user.id, 'complete')
+        backend_url = settings.backend_url
+        ack_url = f'{backend_url}/reminder-assignments/callback?token={ack_token}'
+        complete_url = f'{backend_url}/reminder-assignments/callback?token={complete_token}'
+
+        subject = self._format_subject(reminder)
+        plain_message = self._format_message(user, reminder, notification)
+        html_content = self._format_html_with_actions(user, reminder, notification, ack_url, complete_url)
+
+        success = self.provider.send(
+            recipient=user.email,
+            subject=subject,
+            message=plain_message,
+            html_content=html_content,
+        )
+
+        if success:
+            logger.info(f'Reminder notification with actions sent to {user.email} for {reminder.title}')
+        else:
+            logger.error(f'Failed to send action notification to {user.email}')
+
+        return success
+
+    def _format_html_with_actions(
+        self,
+        user: 'UserEntity',
+        reminder: 'ReminderEntity',
+        notification: NotificationEntity,
+        ack_url: str,
+        complete_url: str,
+    ) -> str:
+        """Build an HTML email body with Acknowledge and Complete action buttons."""
+        desc_html = f'<p style="color:#555;font-size:14px;">{reminder.description}</p>' if reminder.description else ''
+        creator_html = (
+            f'<p style="color:#888;font-size:12px;">Assigned by: {notification.creator_email}</p>'
+            if notification.creator_email
+            else ''
+        )
+        scheduled_html = (
+            f'<p style="color:#888;font-size:12px;">Scheduled for: '
+            f'{notification.scheduled_time.strftime("%Y-%m-%d %H:%M %Z")}</p>'
+            if notification.scheduled_time
+            else ''
+        )
+        note_html = (
+            f'<p style="color:#555;font-size:14px;"><em>{notification.message}</em></p>' if notification.message else ''
+        )
+        return f"""<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f9fafb;padding:32px;">
+  <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:12px;
+              padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <h2 style="color:#0284c7;margin-top:0;">🔔 Reminder: {reminder.title}</h2>
+    <p style="color:#374151;font-size:15px;">Hi {user.name},</p>
+    {desc_html}
+    {creator_html}
+    {scheduled_html}
+    {note_html}
+    <div style="margin:28px 0;display:flex;gap:12px;">
+      <a href="{ack_url}"
+         style="display:inline-block;padding:12px 24px;background:#0284c7;color:#fff;
+                text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px;">
+        ✅ I've Seen This Reminder
+      </a>
+      <a href="{complete_url}"
+         style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;
+                text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px;margin-left:12px;">
+        ✓ Mark As Completed
+      </a>
+    </div>
+    <p style="color:#9ca3af;font-size:11px;margin-top:24px;">
+      These links expire in 7 days. Only you can use them.
+    </p>
+    <p style="color:#9ca3af;font-size:11px;">— Remindly</p>
+  </div>
+</body>
+</html>"""
 
     def change_provider(self, provider: NotificationProvider) -> None:
         """Change the notification provider.

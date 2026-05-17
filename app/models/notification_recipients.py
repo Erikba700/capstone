@@ -19,4 +19,4 @@ class NotificationRecipients(DomainSqlModel):
     creator_email: Mapped[str] = mapped_column(sa.String, nullable=True)
     scheduled_time: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
     sent_at: Mapped[datetime] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)
-    is_read: Mapped[bool] = mapped_column(default=False, nullable=False)
+    is_read_at: Mapped[datetime | None] = mapped_column(sa.TIMESTAMP(timezone=True), nullable=True)

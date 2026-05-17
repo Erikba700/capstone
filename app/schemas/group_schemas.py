@@ -80,9 +80,28 @@ class AssigneeResponseSchema(BaseSchema):
     user_id: uuid.UUID
     assigned_by: uuid.UUID
     assigned_at: AwareDatetime
+    acknowledged_at: AwareDatetime | None = None
     completed_at: AwareDatetime | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime
+
+
+class AcknowledgeResponseSchema(BaseSchema):
+    """Response after acknowledging a reminder assignment."""
+
+    id: uuid.UUID
+    status: str  # 'in_progress'
+    acknowledged_at: AwareDatetime
+    is_read_at: AwareDatetime
+
+
+class CompleteResponseSchema(BaseSchema):
+    """Response after completing a reminder assignment."""
+
+    id: uuid.UUID
+    status: str  # 'completed'
+    completed_at: AwareDatetime
+    is_read_at: AwareDatetime
 
 
 class AddAssigneeRequestSchema(BaseSchema):

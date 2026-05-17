@@ -28,6 +28,10 @@ class ReminderAssignees(DomainSqlModel):
         sa.TIMESTAMP(timezone=True),
         nullable=False,
     )
+    acknowledged_at: Mapped[datetime | None] = mapped_column(
+        sa.TIMESTAMP(timezone=True),
+        nullable=True,
+    )
     completed_at: Mapped[datetime | None] = mapped_column(
         sa.TIMESTAMP(timezone=True),
         nullable=True,

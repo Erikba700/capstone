@@ -16,7 +16,7 @@ class NotificationEntity(DomainEntity):
     creator_email: str | None
     scheduled_time: AwareDatetime | None
     sent_at: datetime | None
-    is_read: bool
+    is_read_at: datetime | None = None
 
     @classmethod
     def create_new(
@@ -28,7 +28,7 @@ class NotificationEntity(DomainEntity):
         scheduled_time: AwareDatetime | None = None,
         sent_at: datetime | None = None,
         *,
-        is_read: bool = False,
+        is_read_at: datetime | None = None,
     ) -> Self:
         """Construct new notification."""
         id_ = cls.generate_id()
@@ -41,7 +41,7 @@ class NotificationEntity(DomainEntity):
             creator_email=creator_email,
             scheduled_time=scheduled_time,
             sent_at=sent_at,
-            is_read=is_read,
+            is_read_at=is_read_at,
             created_at=now,
             updated_at=now,
         )
@@ -52,9 +52,6 @@ class NotificationEntity(DomainEntity):
     ) -> Self:
         """Update current notification with new data from payload."""
         now = self.generate_current_timestamp()
-
         model = self.model_copy(update=payload, deep=True)
-
         model.updated_at = now
-
         return model

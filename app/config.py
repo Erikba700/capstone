@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     email_password: str = Field(default='')
 
     frontend_url: str = Field(default='http://localhost:5173')
+    backend_url: str = Field(default='http://localhost:8000/api')
 
 
 settings = Settings()  # type: ignore

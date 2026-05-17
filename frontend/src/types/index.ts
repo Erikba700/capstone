@@ -37,6 +37,7 @@ export interface ReminderAssignee {
   user_id: string;
   assigned_by: string;
   assigned_at: string;
+  acknowledged_at: string | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -50,6 +51,7 @@ export interface AssigneeDetail {
   assigned_by: string;
   assigned_by_name: string | null;
   assigned_at: string;
+  acknowledged_at: string | null;
   completed_at: string | null;
 }
 
@@ -73,7 +75,7 @@ export interface Reminder {
 export interface Notification {
   id: string;
   message: string;
-  is_read: boolean;
+  is_read_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +136,20 @@ export interface GroupReminderUpdateRequest {
 
 export interface NotifyCountResponse {
   notified: number;
+}
+
+export interface AcknowledgeResponse {
+  id: string;
+  status: string;
+  acknowledged_at: string;
+  is_read_at: string;
+}
+
+export interface CompleteAssignmentResponse {
+  id: string;
+  status: string;
+  completed_at: string;
+  is_read_at: string;
 }
 
 export interface UpdateReminderRequest {

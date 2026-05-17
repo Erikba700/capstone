@@ -5,9 +5,12 @@ import type {
   UpdateReminderRequest,
   RemindersFilters,
   ReminderAssignee,
+  AcknowledgeResponse,
+  CompleteAssignmentResponse,
 } from '../types';
 
 export const remindersApi = {
+  // ...existing code...
   getAll: async (filters?: RemindersFilters): Promise<Reminder[]> => {
     const response = await apiClient.post<{ reminders: Reminder[] }>(
       '/reminders/search',
@@ -49,6 +52,20 @@ export const remindersApi = {
     const response = await apiClient.patch<ReminderAssignee>(
       `/reminder-assignments/${assignmentId}`,
       { completed }
+    );
+    return response.data;
+  },
+
+  acknowledgeAssignment: async (assignmentId: string): Promise<AcknowledgeResponse> => {
+    const response = await apiClient.post<AcknowledgeResponse>(
+      `/reminder-assignments/${assignmentId}/acknowledge`
+    );
+    return response.data;
+  },
+
+  completeAssignment: async (assignmentId: string): Promise<CompleteAssignmentResponse> => {
+    const response = await apiClient.post<CompleteAssignmentResponse>(
+      `/reminder-assignments/${assignmentId}/complete`
     );
     return response.data;
   },

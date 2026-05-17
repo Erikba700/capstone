@@ -63,7 +63,7 @@ function ReminderForm({ members, groupId, initial, onSave, onCancel, isDarkMode 
         // When creating, only send if non-empty.
         assignee_ids: initial ? assigneeIds : (assigneeIds.length > 0 ? assigneeIds : undefined),
         notify_assignees: notifyAssignees,
-        scheduled_time: scheduledTime ? new Date(scheduledTime).toISOString() : undefined,
+
         assignee_scheduled_time: assigneeScheduledTime ? new Date(assigneeScheduledTime).toISOString() : undefined,
       });
     } finally {

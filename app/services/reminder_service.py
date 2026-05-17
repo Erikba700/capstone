@@ -117,7 +117,7 @@ class ReminderService:
             user_id=assignee_id,
             assigned_by=reminder.owner_id,
         )
-        await self.repos.reminder_assignee_pgsql_repo.insert(entity=assignee_entity)
+        created_assignment = await self.repos.reminder_assignee_pgsql_repo.insert(entity=assignee_entity)
         logger.info('Created reminder assignee', user_id=assignee_id, reminder_id=reminder.id)
 
         if assignee_id != reminder.owner_id and schema.notify_assignees:
@@ -157,10 +157,11 @@ class ReminderService:
                     )
                 else:
                     created_notif = await self.repos.notification_pgsql_repo.insert(notif)
-                    success = notification_service.send_reminder_notification(
+                    success = notification_service.send_reminder_notification_with_actions(
                         user=assignee_user,
                         reminder=reminder,
                         notification=created_notif,
+                        assignment_id=created_assignment.id,
                     )
                     if success:
                         await notification_service.mark_notification_as_sent(created_notif)
@@ -274,7 +275,7 @@ class ReminderService:
                 user_id=uid,
                 assigned_by=assigned_by,
             )
-            await self.repos.reminder_assignee_pgsql_repo.insert(entity=entity)
+            created_assignment = await self.repos.reminder_assignee_pgsql_repo.insert(entity=entity)
 
             if notify:
                 assignee_user = await self.repos.user_pgsql_repo.find_by_id(uid)
@@ -292,13 +293,12 @@ class ReminderService:
                         created = await self.repos.notification_pgsql_repo.insert(notification)
                         await notification_service.create_scheduled_notification(created)
                     else:
-                        (
-                            created_notif,
-                            success,
-                        ) = await notification_service.send_and_create_notification(
+                        created_notif = await self.repos.notification_pgsql_repo.insert(notification)
+                        success = notification_service.send_reminder_notification_with_actions(
                             user=assignee_user,
                             reminder=reminder,
-                            notification=notification,
+                            notification=created_notif,
+                            assignment_id=created_assignment.id,
                         )
                         if success:
                             await notification_service.mark_notification_as_sent(created_notif)
@@ -601,6 +601,7 @@ class ReminderService:
                     'assigned_by': str(a.assigned_by),
                     'assigned_by_name': assigner_user.name if assigner_user else None,
                     'assigned_at': a.assigned_at,
+                    'acknowledged_at': a.acknowledged_at,
                     'completed_at': a.completed_at,
                 }
             )
