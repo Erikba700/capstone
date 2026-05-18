@@ -4,9 +4,12 @@ This module contains the base notification provider interface and concrete
 implementations for different notification channels (email, SMS, etc.).
 """
 
+import asyncio
 import smtplib
+import ssl
 from abc import ABC, abstractmethod
 from email.message import EmailMessage
+from functools import partial
 from typing import Any
 
 import structlog
@@ -41,6 +44,27 @@ class NotificationProvider(ABC):
             True if the notification was sent successfully, False otherwise
         """
 
+    async def async_send(
+        self,
+        recipient: str,
+        subject: str,
+        message: str,
+        **kwargs: Any,
+    ) -> bool:
+        """Non-blocking async wrapper around send().
+
+        Runs the blocking send() in a thread-pool executor so it does not
+        block the asyncio event loop.
+
+        Returns:
+            True if the notification was sent successfully, False otherwise
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            partial(self.send, recipient, subject, message, **kwargs),
+        )
+
 
 class EmailNotificationProvider(NotificationProvider):
     """Email notification provider using SMTP.
@@ -54,7 +78,7 @@ class EmailNotificationProvider(NotificationProvider):
         sender_email: str,
         sender_password: str,
         smtp_server: str = 'smtp.gmail.com',
-        smtp_port: int = 587,
+        smtp_port: int = 465,
     ) -> None:
         """Initialize the email notification provider.
 
@@ -110,8 +134,8 @@ class EmailNotificationProvider(NotificationProvider):
                 msg.add_alternative(html_content, subtype='html')
 
             # Connect to SMTP server and send
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, timeout=10, context=context) as server:
                 server.login(self.sender_email, self.sender_password)
                 server.send_message(msg)
 
@@ -120,6 +144,9 @@ class EmailNotificationProvider(NotificationProvider):
 
         except smtplib.SMTPException as e:
             logger.error(f'SMTP error sending email to {recipient}: {e}')
+            return False
+        except (TimeoutError, OSError) as e:
+            logger.error(f'Connection/timeout error sending email to {recipient}: {e}')
             return False
         except Exception as e:
             logger.error(f'Unexpected error sending email to {recipient}: {e}')

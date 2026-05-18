@@ -312,14 +312,14 @@ class GroupReminderService:
             logger.info('Scheduled group notification', user_id=user.id, reminder_id=reminder.id, at=scheduled_time)
         else:
             if assignment_id is not None:
-                success = notification_service.send_reminder_notification_with_actions(
+                success = await notification_service.send_reminder_notification_with_actions(
                     user=user,
                     reminder=reminder,
                     notification=created,
                     assignment_id=assignment_id,
                 )
             else:
-                success = notification_service.send_reminder_notification(
+                success = await notification_service.send_reminder_notification(
                     user=user,
                     reminder=reminder,
                     notification=created,

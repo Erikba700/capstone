@@ -38,7 +38,7 @@ class ReminderService:
     ) -> None:
         """Send or schedule a notification when creating a reminder."""
         payload = schema.model_dump(exclude_unset=True)
-        if 'user_id' not in payload or 'scheduled_time' not in payload:
+        if 'user_id' not in payload or payload['user_id'] is None:
             return
 
         notification_user = await self.repos.user_pgsql_repo.find_by_id(payload['user_id'])
@@ -69,7 +69,7 @@ class ReminderService:
 
         if notification_scheduled_time is None:
             created_notification = await self.repos.notification_pgsql_repo.insert(notification)
-            success = notification_service.send_reminder_notification(
+            success = await notification_service.send_reminder_notification(
                 user=notification_user,
                 reminder=reminder,
                 notification=created_notification,
@@ -157,7 +157,7 @@ class ReminderService:
                     )
                 else:
                     created_notif = await self.repos.notification_pgsql_repo.insert(notif)
-                    success = notification_service.send_reminder_notification_with_actions(
+                    success = await notification_service.send_reminder_notification_with_actions(
                         user=assignee_user,
                         reminder=reminder,
                         notification=created_notif,
@@ -290,11 +290,10 @@ class ReminderService:
                     )
                     notification_service = NotificationService(repos=self.repos)
                     if scheduled_time is not None:
-                        created = await self.repos.notification_pgsql_repo.insert(notification)
-                        await notification_service.create_scheduled_notification(created)
+                        await notification_service.create_scheduled_notification(notification)
                     else:
                         created_notif = await self.repos.notification_pgsql_repo.insert(notification)
-                        success = notification_service.send_reminder_notification_with_actions(
+                        success = await notification_service.send_reminder_notification_with_actions(
                             user=assignee_user,
                             reminder=reminder,
                             notification=created_notif,

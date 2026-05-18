@@ -57,3 +57,22 @@ class UserProfileResponseSchema(BaseSchema):
     timezone: str
     created_at: AwareDatetime
     updated_at: AwareDatetime
+
+
+class ForgotPasswordRequestSchema(BaseSchema):
+    """Schema for forgot password request."""
+
+    email: str
+
+
+class ResetPasswordRequestSchema(BaseSchema):
+    """Schema for reset password request."""
+
+    token: str
+    new_password: str
+
+
+class MessageResponseSchema(BaseSchema):
+    """Generic message response schema."""
+
+    message: str

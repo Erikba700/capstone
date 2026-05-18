@@ -12,6 +12,9 @@ from app.entities import UserEntity
 from app.exceptions import BadRequestError
 from app.repos import RepoFactory
 from app.schemas.user_schemas import (
+    ForgotPasswordRequestSchema,
+    MessageResponseSchema,
+    ResetPasswordRequestSchema,
     UserLoginResponseSchema,
     UserProfileResponseSchema,
     UserSignUpRequestSchema,
@@ -25,6 +28,10 @@ from app.utils import (
     get_hashed_password,
     validate_timezone,
     verify_password,
+)
+from app.utils.password_reset_tokens import (
+    decode_password_reset_token,
+    generate_password_reset_token,
 )
 
 router = APIRouter(tags=['Users'])
@@ -132,3 +139,75 @@ async def login(
         'access_token': create_access_token(user.id),
         'refresh_token': create_refresh_token(user.id),
     }
+
+
+@router.post('/forgot-password', response_model=MessageResponseSchema, summary='Request a password reset email')
+async def forgot_password(
+    schema: ForgotPasswordRequestSchema,
+    repos: Annotated[RepoFactory, Depends(get_repo)],
+) -> dict:
+    """Send a password reset link to the user's email address.
+
+    Always returns a success message regardless of whether the email exists,
+    to prevent user enumeration.
+    """
+    from app.config import settings as _settings
+    from app.services.notifications_service import NotificationService
+
+    # `service` is not needed here; only the notification service is used.
+    notification_service = NotificationService(repos=repos)
+
+    user = await repos.user_pgsql_repo.find_by_username(email=schema.email)
+    if user is not None:
+        token = generate_password_reset_token(user.id)
+        reset_url = f'{_settings.frontend_url}/reset-password?token={token}'
+        html_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #1f2937;">Reset Your Password</h2>
+          <p style="color: #4b5563;">You requested a password reset for your Remindly account.</p>
+          <p style="color: #4b5563;">
+            Click the button below to set a new password.
+            This link expires in <strong>30 minutes</strong>.
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="{reset_url}"
+               style="background-color: #6366f1; color: white; padding: 14px 28px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+              Reset Password
+            </a>
+          </div>
+          <p style="color: #9ca3af; font-size: 13px;">
+            If you did not request a password reset, you can safely ignore this email.
+          </p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #9ca3af; font-size: 12px;">Remindly — reminder management app</p>
+        </div>
+        """
+        await notification_service.send_custom_notification(
+            recipient=schema.email,
+            subject='Reset your Remindly password',
+            message=html_body,
+            html_content=html_body,
+        )
+
+    return {'message': 'If an account with that email exists, a password reset link has been sent.'}
+
+
+@router.post('/reset-password', response_model=MessageResponseSchema, summary='Reset password using a token')
+async def reset_password(
+    schema: ResetPasswordRequestSchema,
+    repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
+) -> dict:
+    """Reset a user's password given a valid signed reset token."""
+    try:
+        user_id = decode_password_reset_token(schema.token)
+    except ValueError as exc:
+        raise BadRequestError(str(exc)) from exc
+
+    service = UserService(repos=repos)
+    user = await service.fetch_user_by_id(user_id)
+
+    updated = user.update(payload={'hashed_password': get_hashed_password(schema.new_password)})
+    await repos.user_pgsql_repo.update(entity=updated)
+
+    return {'message': 'Password has been reset successfully. You can now log in with your new password.'}

@@ -34,7 +34,7 @@ class NotificationService:
         else:
             self.provider = notification_provider
 
-    def send_reminder_notification(
+    async def send_reminder_notification(
         self,
         user: UserEntity,
         reminder: ReminderEntity,
@@ -56,8 +56,8 @@ class NotificationService:
         subject = self._format_subject(reminder)
         message = self._format_message(user, reminder, notification)
 
-        # Send via the configured provider
-        success = self.provider.send(
+        # Send via the configured provider (non-blocking)
+        success = await self.provider.async_send(
             recipient=user.email,
             subject=subject,
             message=message,
@@ -71,7 +71,7 @@ class NotificationService:
 
         return success
 
-    def send_custom_notification(
+    async def send_custom_notification(
         self,
         recipient: str,
         subject: str,
@@ -89,7 +89,7 @@ class NotificationService:
         Returns:
             True if notification was sent successfully, False otherwise
         """
-        success = self.provider.send(
+        success = await self.provider.async_send(
             recipient=recipient,
             subject=subject,
             message=message,
@@ -103,7 +103,7 @@ class NotificationService:
 
         return success
 
-    def send_bulk_notifications(
+    async def send_bulk_notifications(
         self,
         users: list[UserEntity],
         subject: str,
@@ -124,7 +124,7 @@ class NotificationService:
         results = {}
 
         for user in users:
-            success = self.provider.send(
+            success = await self.provider.async_send(
                 recipient=user.email,
                 subject=subject,
                 message=message,
@@ -238,7 +238,7 @@ class NotificationService:
         created_notification = await self.create_notification(notification)
 
         # Then attempt to send
-        success = self.send_reminder_notification(
+        success = await self.send_reminder_notification(
             user=user,
             reminder=reminder,
             notification=created_notification,
@@ -304,7 +304,7 @@ class NotificationService:
         logger.info(f'Notification {notification.id} marked as read')
         return updated_notification
 
-    def send_reminder_notification_with_actions(
+    async def send_reminder_notification_with_actions(
         self,
         user: 'UserEntity',
         reminder: 'ReminderEntity',
@@ -336,7 +336,7 @@ class NotificationService:
         plain_message = self._format_message(user, reminder, notification)
         html_content = self._format_html_with_actions(user, reminder, notification, ack_url, complete_url)
 
-        success = self.provider.send(
+        success = await self.provider.async_send(
             recipient=user.email,
             subject=subject,
             message=plain_message,

@@ -101,14 +101,14 @@ async def _send_scheduled_notifications_async() -> dict:
                 )
 
                 if assignment is not None:
-                    success = notification_service.send_reminder_notification_with_actions(
+                    success = await notification_service.send_reminder_notification_with_actions(
                         user=user,
                         reminder=reminder,
                         notification=notification,
                         assignment_id=assignment.id,
                     )
                 else:
-                    success = notification_service.send_reminder_notification(
+                    success = await notification_service.send_reminder_notification(
                         user=user,
                         reminder=reminder,
                         notification=notification,
@@ -228,14 +228,14 @@ async def _send_immediate_notification_async(
             user_id=user.id,
         )
         if assignment is not None:
-            success = notification_service.send_reminder_notification_with_actions(
+            success = await notification_service.send_reminder_notification_with_actions(
                 user=user,
                 reminder=reminder,
                 notification=notification,
                 assignment_id=assignment.id,
             )
         else:
-            success = notification_service.send_reminder_notification(
+            success = await notification_service.send_reminder_notification(
                 user=user,
                 reminder=reminder,
                 notification=notification,

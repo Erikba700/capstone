@@ -95,6 +95,16 @@ export default function Login() {
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
+
+            <p className="text-right mt-2">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium hover:underline"
+                style={{ color: '#6366f1' }}
+              >
+                Forgot password?
+              </Link>
+            </p>
           </form>
 
           <p

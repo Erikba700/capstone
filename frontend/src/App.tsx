@@ -14,6 +14,8 @@ import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
 import Friends from './pages/Friends';
 import ReminderCallback from './pages/ReminderCallback';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { useDarkMode } from './hooks/useDarkMode';
 
 function App() {
@@ -100,6 +102,8 @@ function App() {
           />
 
           <Route path="/reminder-callback" element={<ReminderCallback />} />
+          <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />} />
+          <Route path="/reset-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ResetPassword />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

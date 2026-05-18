@@ -396,7 +396,7 @@ async def _notify_assigner(
     )
     notification_service = NotificationService(repos=repos)
     created = await repos.notification_pgsql_repo.insert(notification)
-    success = notification_service.send_custom_notification(
+    success = await notification_service.send_custom_notification(
         recipient=assigner.email,
         subject=f'Reminder {action_verb}: {reminder.title}',
         message=f'Hi {assigner.name},\n\n{msg}\n\n— Remindly',
