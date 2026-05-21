@@ -61,12 +61,10 @@ export default function ReminderCard({
     if (!myAssignment) return;
     setCompletingAssignment(true);
     try {
-      // Mark the assignment row as completed
-      await remindersApi.updateAssignment(myAssignment.id, true);
-      // Also change the reminder status to completed
-      await remindersApi.update(reminder.id, { status: 'completed' });
+      // POST /complete sets completed_at, updates reminder status, and notifies the creator
+      await remindersApi.completeAssignment(myAssignment.id);
       setAssigneeStatus('completed');
-      toast.success('Assignment marked as completed!');
+      toast.success('Marked as done! The creator has been notified.');
       onRefresh?.();
     } catch {
       toast.error('Failed to update assignment');
@@ -80,9 +78,9 @@ export default function ReminderCard({
     setSavingStatus(true);
     try {
       await remindersApi.update(reminder.id, { status: newStatus });
-      // If marking completed via dropdown, also complete the assignment record
+      // If marking completed via dropdown, also complete the assignment → notifies creator
       if (newStatus === 'completed' && myAssignment && !myAssignment.completed_at) {
-        await remindersApi.updateAssignment(myAssignment.id, true);
+        await remindersApi.completeAssignment(myAssignment.id);
       }
       toast.success('Status updated!');
       onRefresh?.();

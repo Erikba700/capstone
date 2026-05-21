@@ -225,6 +225,10 @@ function GroupReminderCard({
     setStatusSaving(true);
     try {
       await groupsApi.updateGroupReminder(reminder.id, { status: newStatus });
+      // If an assignee marks completed via dropdown, complete their assignment → notifies creator
+      if (newStatus === 'completed' && myAssignment && !myAssignment.completed_at) {
+        await remindersApi.completeAssignment(myAssignment.id);
+      }
       toast.success('Status updated');
       onRefresh();
     } catch { toast.error('Failed to update status'); }
@@ -283,9 +287,9 @@ function GroupReminderCard({
   const handleCompleteAssignment = async () => {
     if (!myAssignment) return;
     try {
-      await remindersApi.updateAssignment(myAssignment.id, true);
-      await groupsApi.updateGroupReminder(reminder.id, { status: 'completed' });
-      toast.success('Marked as done!');
+      // POST /complete sets completed_at, updates reminder status, and notifies the creator
+      await remindersApi.completeAssignment(myAssignment.id);
+      toast.success('Marked as done! The creator has been notified.');
       onRefresh();
     } catch { toast.error('Failed to complete'); }
   };
