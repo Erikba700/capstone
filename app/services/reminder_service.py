@@ -95,8 +95,14 @@ class ReminderService:
         entity: ReminderEntity,
         schema: RemindersCreateRequestSchema,
         owner: 'UserEntity',
-    ) -> None:
-        """Validate and create a single reminder assignee, optionally notifying them."""
+    ) -> tuple[uuid.UUID, uuid.UUID, 'UserEntity | None', 'NotificationEntity | None'] | None:
+        """Validate and create a single reminder assignee.
+
+        Returns a tuple of (assignee_id, assignment_id, assignee_user, notif_entity)
+        when an immediate notification should be sent, so callers can fire them
+        concurrently. Returns None when no email needs to be sent (scheduled or
+        owner self-assignment).
+        """
         if assignee_id != reminder.owner_id:
             if entity.group_id is not None:
                 in_group = await self.repos.group_member_pgsql_repo.find_by_group_and_user(
@@ -120,51 +126,51 @@ class ReminderService:
         created_assignment = await self.repos.reminder_assignee_pgsql_repo.insert(entity=assignee_entity)
         logger.info('Created reminder assignee', user_id=assignee_id, reminder_id=reminder.id)
 
-        if assignee_id != reminder.owner_id and schema.notify_assignees:
-            assignee_user = await self.repos.user_pgsql_repo.find_by_id(assignee_id)
-            if assignee_user is not None:
-                notification_service = NotificationService(repos=self.repos)
-                from app.entities import NotificationEntity
+        if assignee_id == reminder.owner_id or not schema.notify_assignees:
+            return None
 
-                # Convert assignee scheduled time to their timezone UTC
-                scheduled_time_utc = None
-                if schema.assignee_scheduled_time is not None:
-                    scheduled_time_utc = convert_to_utc(
-                        schema.assignee_scheduled_time,
-                        assignee_user.timezone,
-                    )
-                    logger.info(
-                        'Converted assignee scheduled time to UTC',
-                        original_time=schema.assignee_scheduled_time,
-                        utc_time=scheduled_time_utc,
-                        user_timezone=assignee_user.timezone,
-                    )
+        assignee_user = await self.repos.user_pgsql_repo.find_by_id(assignee_id)
+        if assignee_user is None:
+            return None
 
-                notif = NotificationEntity.create_new(
-                    user_id=assignee_id,
-                    reminder_id=reminder.id,
-                    message=f'You were assigned a reminder: {reminder.title}',
-                    creator_email=owner.email,
-                    scheduled_time=scheduled_time_utc,
-                )
+        from app.entities import NotificationEntity as _NotifEntity
 
-                if scheduled_time_utc is not None:
-                    await notification_service.create_scheduled_notification(notif)
-                    logger.info(
-                        'Scheduled assignee notification',
-                        user=assignee_user.email,
-                        utc_time=scheduled_time_utc,
-                    )
-                else:
-                    created_notif = await self.repos.notification_pgsql_repo.insert(notif)
-                    success = await notification_service.send_reminder_notification_with_actions(
-                        user=assignee_user,
-                        reminder=reminder,
-                        notification=created_notif,
-                        assignment_id=created_assignment.id,
-                    )
-                    if success:
-                        await notification_service.mark_notification_as_sent(created_notif)
+        # Convert assignee scheduled time to their timezone UTC
+        scheduled_time_utc = None
+        if schema.assignee_scheduled_time is not None:
+            scheduled_time_utc = convert_to_utc(
+                schema.assignee_scheduled_time,
+                assignee_user.timezone,
+            )
+            logger.info(
+                'Converted assignee scheduled time to UTC',
+                original_time=schema.assignee_scheduled_time,
+                utc_time=scheduled_time_utc,
+                user_timezone=assignee_user.timezone,
+            )
+
+        notif = _NotifEntity.create_new(
+            user_id=assignee_id,
+            reminder_id=reminder.id,
+            message=f'You were assigned a reminder: {reminder.title}',
+            creator_email=owner.email,
+            scheduled_time=scheduled_time_utc,
+        )
+
+        notification_service = NotificationService(repos=self.repos)
+
+        if scheduled_time_utc is not None:
+            await notification_service.create_scheduled_notification(notif)
+            logger.info(
+                'Scheduled assignee notification',
+                user=assignee_user.email,
+                utc_time=scheduled_time_utc,
+            )
+            return None
+
+        # Immediate: persist notification row now, return info for concurrent send
+        created_notif = await self.repos.notification_pgsql_repo.insert(notif)
+        return (assignee_id, created_assignment.id, assignee_user, created_notif)
 
     async def create_reminder(
         self,
@@ -199,16 +205,46 @@ class ReminderService:
         await self._handle_create_notification(schema=schema, reminder=reminder, owner=owner)
 
         if schema.assignee_ids:
-            for assignee_id in schema.assignee_ids:
-                await self._handle_assignee(
-                    assignee_id=assignee_id,
-                    reminder=reminder,
-                    entity=entity,
-                    schema=schema,
-                    owner=owner,
-                )
+            await self._create_assignees_and_notify(schema=schema, reminder=reminder, entity=entity, owner=owner)
 
         return reminder
+
+    async def _create_assignees_and_notify(
+        self,
+        schema: RemindersCreateRequestSchema,
+        reminder: ReminderEntity,
+        entity: ReminderEntity,
+        owner: UserEntity,
+    ) -> None:
+        """Insert all assignee records then batch-send immediate notifications."""
+        pending_sends = []
+        for assignee_id in schema.assignee_ids or []:
+            result = await self._handle_assignee(
+                assignee_id=assignee_id,
+                reminder=reminder,
+                entity=entity,
+                schema=schema,
+                owner=owner,
+            )
+            if result is not None:
+                pending_sends.append(result)
+
+        logger.info('Collected pending assignee sends', count=len(pending_sends))
+        if not pending_sends:
+            return
+
+        notification_service = NotificationService(repos=self.repos)
+        valid = [(au, cn, aid) for (_, aid, au, cn) in pending_sends if au is not None and cn is not None]
+        logger.info('Valid assignee sends after filter', count=len(valid))
+        if valid:
+            batch_results = await notification_service.send_reminder_notifications_batch(
+                [(au, reminder, cn, aid) for (au, cn, aid) in valid]
+            )
+            for (au, cn, _), sent in zip(valid, batch_results, strict=True):
+                if sent:
+                    await notification_service.mark_notification_as_sent(cn)
+                else:
+                    logger.error('Failed to send assignee notification', user_id=au.id)
 
     async def list_group_reminders(self, group_id: uuid.UUID) -> list[ReminderEntity]:
         """Fetch all reminders belonging to a group."""
@@ -269,6 +305,7 @@ class ReminderService:
                 )
 
         # Add new assignees
+        pending_sends = []
         for uid in new_set - existing_ids:
             entity = ReminderAssigneeEntity.create_new(
                 reminder_id=reminder.id,
@@ -293,14 +330,19 @@ class ReminderService:
                         await notification_service.create_scheduled_notification(notification)
                     else:
                         created_notif = await self.repos.notification_pgsql_repo.insert(notification)
-                        success = await notification_service.send_reminder_notification_with_actions(
-                            user=assignee_user,
-                            reminder=reminder,
-                            notification=created_notif,
-                            assignment_id=created_assignment.id,
+                        pending_sends.append(
+                            (assignee_user, created_notif, created_assignment.id, notification_service)
                         )
-                        if success:
-                            await notification_service.mark_notification_as_sent(created_notif)
+
+        # Fire all immediate notifications over ONE SMTP connection via batch send
+        if pending_sends:
+            svc = NotificationService(repos=self.repos)
+            batch_results = await svc.send_reminder_notifications_batch(
+                [(u, reminder, n, aid) for (u, n, aid, _) in pending_sends]
+            )
+            for (_, n, _, _), sent in zip(pending_sends, batch_results, strict=True):
+                if sent:
+                    await svc.mark_notification_as_sent(n)
 
     async def update_reminder(
         self,

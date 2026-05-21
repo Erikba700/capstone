@@ -350,6 +350,55 @@ class NotificationService:
 
         return success
 
+    async def send_reminder_notifications_batch(
+        self,
+        items: list[
+            tuple[
+                'UserEntity',
+                'ReminderEntity',
+                NotificationEntity,
+                'uuid.UUID',  # assignment_id
+            ]
+        ],
+    ) -> list[bool]:
+        """Send action-button emails to multiple assignees over ONE SMTP connection.
+
+        Builds all email payloads first, then delegates to the provider's
+        async_send_batch so a single connection handles every message.
+        This prevents Gmail per-connection rate-limiting that silently drops
+        emails when several connections are opened nearly simultaneously.
+
+        Returns:
+            List of bool in the same order as *items*.
+        """
+        from app.utils.callback_tokens import generate_callback_token
+
+        messages: list[dict] = []
+        for user, reminder, notification, assignment_id in items:
+            ack_token = generate_callback_token(assignment_id, user.id, 'acknowledge')
+            complete_token = generate_callback_token(assignment_id, user.id, 'complete')
+            backend_url = settings.backend_url
+            ack_url = f'{backend_url}/reminder-assignments/callback?token={ack_token}'
+            complete_url = f'{backend_url}/reminder-assignments/callback?token={complete_token}'
+
+            messages.append(
+                {
+                    'recipient': user.email,
+                    'subject': self._format_subject(reminder),
+                    'message': self._format_message(user, reminder, notification),
+                    'html_content': self._format_html_with_actions(user, reminder, notification, ack_url, complete_url),
+                }
+            )
+
+        logger.info(f'send_reminder_notifications_batch: sending {len(messages)} emails')
+        results = await self.provider.async_send_batch(messages)
+        for i, (user, reminder, _, _) in enumerate(items):
+            if results[i]:
+                logger.info(f'Batch action notification sent to {user.email} for {reminder.title}')
+            else:
+                logger.error(f'Batch action notification failed for {user.email}')
+        return results
+
     def _format_html_with_actions(
         self,
         user: 'UserEntity',
