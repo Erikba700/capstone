@@ -164,6 +164,20 @@ export interface UpdateReminderRequest {
   assignee_scheduled_time?: string | null;
 }
 
+// ── Reassignment requests ─────────────────────────────────────────────────────
+
+export interface ReassignmentRequest {
+  id: string;
+  reminder_id: string;
+  requester_id: string;
+  requester_name: string | null;
+  current_assignee_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  message: string | null;
+  reminder_title: string | null;
+  created_at: string;
+}
+
 export interface CreateGroupRequest {
   name: string;
   description?: string;

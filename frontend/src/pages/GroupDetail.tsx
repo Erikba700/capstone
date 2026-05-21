@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { groupsApi } from '../api/groups';
 import { remindersApi } from '../api/reminders';
+import { reassignmentApi } from '../api/reassignment';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuthStore } from '../context/store';
-import type { Group, GroupMember, MemberRole, Reminder, ReminderStatus, UserSearchItem } from '../types';
+import type { Group, GroupMember, MemberRole, Reminder, ReminderStatus, UserSearchItem, ReassignmentRequest } from '../types';
 
 const ROLE_LABELS: Record<MemberRole, string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
 
@@ -194,10 +195,11 @@ interface GroupReminderCardProps {
   onRefresh: () => void;
   onEdit: (r: Reminder) => void;
   onDelete: (id: string) => void;
+  onRequestTakeover: (reminderId: string) => void;
 }
 
 function GroupReminderCard({
-  reminder, members, myRole, myUserId, isDarkMode, onRefresh, onEdit, onDelete,
+  reminder, members, myRole, myUserId, isDarkMode, onRefresh, onEdit, onDelete, onRequestTakeover,
 }: GroupReminderCardProps) {
   const isAdminOrOwner = myRole === 'admin' || myRole === 'owner';
   const isCreator = reminder.owner_id === myUserId;
@@ -438,6 +440,18 @@ function GroupReminderCard({
             🔔 Notify
           </button>
         )}
+
+        {/* Request takeover: visible when user is NOT assigned and there IS an active assignee */}
+        {!isAssigned && !isCreator && (reminder.assignee_details?.some(a => a.user_id !== myUserId && !a.completed_at)) && (
+          <button
+            onClick={() => onRequestTakeover(reminder.id)}
+            className="text-xs px-2 py-1 rounded font-medium"
+            style={{ backgroundColor: isDarkMode ? '#374151' : '#f3f4f6', color: '#7c3aed' }}
+            title="Request to take over this reminder from the current assignee"
+          >
+            🔄 Request Takeover
+          </button>
+        )}
       </div>
 
       {/* Reassign panel */}
@@ -549,6 +563,46 @@ export default function GroupDetail() {
   const [myRole, setMyRole] = useState<MemberRole | null>(null);
   const [remindersLoading, setRemindersLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [incomingRequests, setIncomingRequests] = useState<ReassignmentRequest[]>([]);
+
+  const fetchIncomingRequests = useCallback(async () => {
+    try {
+      const reqs = await reassignmentApi.listIncoming();
+      setIncomingRequests(reqs);
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleRequestTakeover = useCallback(async (reminderId: string) => {
+    const message = prompt('Optional message to the current assignee (leave empty to skip):');
+    if (message === null) return; // user pressed Cancel
+    try {
+      await reassignmentApi.create(reminderId, message || undefined);
+      toast.success('Takeover request sent! The current assignee will be notified.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to send takeover request');
+    }
+  }, []);
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      await reassignmentApi.accept(requestId);
+      toast.success('Request accepted — you are now the assigner, they are now assigned!');
+      setIncomingRequests(prev => prev.filter(r => r.id !== requestId));
+      if (groupId) fetchGroupReminders(groupId);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await reassignmentApi.reject(requestId);
+      toast.info('Request rejected.');
+      setIncomingRequests(prev => prev.filter(r => r.id !== requestId));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to reject request');
+    }
+  };
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -593,6 +647,7 @@ export default function GroupDetail() {
   }, [user?.id, navigate, fetchGroupReminders]);
 
   useEffect(() => { if (groupId) fetchAll(groupId); }, [groupId, fetchAll]);
+  useEffect(() => { fetchIncomingRequests(); }, [fetchIncomingRequests]);
 
   const handleUpdateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -765,6 +820,40 @@ export default function GroupDetail() {
           </button>
         </div>
 
+        {/* Incoming takeover requests */}
+        {incomingRequests.length > 0 && (
+          <div className="mb-4 rounded-lg p-3 space-y-2" style={{ backgroundColor: isDarkMode ? '#1e3a2f' : '#f0fdf4', border: '1px solid #86efac' }}>
+            <p className="text-sm font-semibold" style={{ color: isDarkMode ? '#86efac' : '#15803d' }}>
+              🔄 Takeover requests ({incomingRequests.length})
+            </p>
+            {incomingRequests.map(req => (
+              <div key={req.id} className="flex items-center justify-between gap-2 text-xs rounded px-3 py-2" style={{ backgroundColor: isDarkMode ? '#143620' : '#dcfce7' }}>
+                <span style={{ color: isDarkMode ? '#d1fae5' : '#166534' }}>
+                  <strong>{req.requester_name ?? 'Someone'}</strong> wants to take over{' '}
+                  <strong>"{req.reminder_title ?? 'a reminder'}"</strong>
+                  {req.message && <span className="ml-1 italic">"{req.message}"</span>}
+                </span>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleAcceptRequest(req.id)}
+                    className="px-2 py-0.5 rounded text-white font-medium"
+                    style={{ backgroundColor: '#16a34a' }}
+                  >
+                    ✓ Accept
+                  </button>
+                  <button
+                    onClick={() => handleRejectRequest(req.id)}
+                    className="px-2 py-0.5 rounded font-medium"
+                    style={{ backgroundColor: isDarkMode ? '#374151' : '#e5e7eb', color: isDarkMode ? '#f3f4f6' : '#374151' }}
+                  >
+                    ✗ Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {showForm && !editingReminder && (
           <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: isDarkMode ? '#111827' : '#f9fafb', border: `1px solid ${borderColor}` }}>
             <h3 className="text-sm font-semibold mb-3" style={{ color: textColor }}>New Reminder</h3>
@@ -796,6 +885,7 @@ export default function GroupDetail() {
                 onRefresh={() => groupId && fetchGroupReminders(groupId)}
                 onEdit={r => { setShowForm(false); setEditingReminder(r); }}
                 onDelete={handleDeleteReminder}
+                onRequestTakeover={handleRequestTakeover}
               />
             ))}
           </div>

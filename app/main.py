@@ -14,6 +14,7 @@ from app.api import (
     friends,
     group_reminders,
     groups,
+    reassignment_requests,
     reminder_assignees,
     reminders,
     root,
@@ -164,6 +165,7 @@ class FastApiAbstractFactory:
         api_router.include_router(router=reminder_assignees.router)
         api_router.include_router(router=friends.router)
         api_router.include_router(router=group_reminders.router)
+        api_router.include_router(router=reassignment_requests.router)
 
         # useful for easy debug
         if self.debug:

@@ -4,6 +4,7 @@ from .friendship_pgsql_repo import FriendshipPgsqlRepo
 from .group_member_pgsql_repo import GroupMemberPgsqlRepo
 from .group_pgsql_repo import GroupPgsqlRepo
 from .notifications_pgsql_repo import NotificationPgsqlRepo
+from .reassignment_request_pgsql_repo import ReassignmentRequestPgsqlRepo
 from .reminder_assignee_pgsql_repo import ReminderAssigneePgsqlRepo
 from .reminder_pgsql_repo import ReminderPgsqlRepo
 from .user_pgsql_repo import UserPgsqlRepo
@@ -50,12 +51,18 @@ class RepoFactory:
         """Init PostgreSQL repo for friendships."""
         return FriendshipPgsqlRepo(self.pgsql_session)
 
+    @property
+    def reassignment_request_pgsql_repo(self) -> ReassignmentRequestPgsqlRepo:
+        """Init PostgreSQL repo for reassignment requests."""
+        return ReassignmentRequestPgsqlRepo(self.pgsql_session)
+
 
 __all__ = [
     'FriendshipPgsqlRepo',
     'GroupMemberPgsqlRepo',
     'GroupPgsqlRepo',
     'NotificationPgsqlRepo',
+    'ReassignmentRequestPgsqlRepo',
     'ReminderAssigneePgsqlRepo',
     'ReminderPgsqlRepo',
     'RepoFactory',

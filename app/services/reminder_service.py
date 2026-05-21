@@ -624,9 +624,15 @@ class ReminderService:
             reminder_dict['scheduled_time'] = None
             reminder_dict['notified_immediately'] = False
 
-        # Attach assignee user ids
-        assignees = await self.repos.reminder_assignee_pgsql_repo.list_by_reminder_id(reminder_id=reminder.id)
-        reminder_dict['assignees'] = [str(a.user_id) for a in assignees]
+        # Attach assignee user ids — deduplicate by user_id (keep latest)
+        assignees_raw = await self.repos.reminder_assignee_pgsql_repo.list_by_reminder_id(reminder_id=reminder.id)
+        seen_users: dict = {}
+        for a in assignees_raw:
+            uid = str(a.user_id)
+            if uid not in seen_users or a.assigned_at > seen_users[uid].assigned_at:
+                seen_users[uid] = a
+        assignees = list(seen_users.values())
+        reminder_dict['assignees'] = list(seen_users.keys())
 
         # Build rich assignee details
         assignee_details = []
