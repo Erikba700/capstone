@@ -126,7 +126,8 @@ class ReminderService:
         created_assignment = await self.repos.reminder_assignee_pgsql_repo.insert(entity=assignee_entity)
         logger.info('Created reminder assignee', user_id=assignee_id, reminder_id=reminder.id)
 
-        if assignee_id == reminder.owner_id or not schema.notify_assignees:
+        # Always skip notification for self-assignment
+        if assignee_id == reminder.owner_id:
             return None
 
         assignee_user = await self.repos.user_pgsql_repo.find_by_id(assignee_id)
@@ -160,6 +161,8 @@ class ReminderService:
         notification_service = NotificationService(repos=self.repos)
 
         if scheduled_time_utc is not None:
+            # Persist the notification record so it shows in the bell,
+            # then schedule the email send
             await notification_service.create_scheduled_notification(notif)
             logger.info(
                 'Scheduled assignee notification',
@@ -168,8 +171,13 @@ class ReminderService:
             )
             return None
 
-        # Immediate: persist notification row now, return info for concurrent send
+        # Always persist notification record (for bell), only email if notify_assignees=True
         created_notif = await self.repos.notification_pgsql_repo.insert(notif)
+
+        if not schema.notify_assignees:
+            logger.info('Skipping email send (notify_assignees=False)', user_id=assignee_id)
+            return None
+
         return (assignee_id, created_assignment.id, assignee_user, created_notif)
 
     async def create_reminder(
@@ -314,22 +322,23 @@ class ReminderService:
             )
             created_assignment = await self.repos.reminder_assignee_pgsql_repo.insert(entity=entity)
 
-            if notify:
-                assignee_user = await self.repos.user_pgsql_repo.find_by_id(uid)
-                assigner_user = await self.repos.user_pgsql_repo.find_by_id(assigned_by)
-                if assignee_user is not None and assigner_user is not None:
-                    notification = NotificationEntity.create_new(
-                        user_id=uid,
-                        reminder_id=reminder.id,
-                        message=f'You were assigned to "{reminder.title}" by {assigner_user.name}',
-                        creator_email=assigner_user.email,
-                        scheduled_time=scheduled_time,
-                    )
-                    notification_service = NotificationService(repos=self.repos)
-                    if scheduled_time is not None:
-                        await notification_service.create_scheduled_notification(notification)
-                    else:
-                        created_notif = await self.repos.notification_pgsql_repo.insert(notification)
+            assignee_user = await self.repos.user_pgsql_repo.find_by_id(uid)
+            assigner_user = await self.repos.user_pgsql_repo.find_by_id(assigned_by)
+            if assignee_user is not None and assigner_user is not None:
+                notification = NotificationEntity.create_new(
+                    user_id=uid,
+                    reminder_id=reminder.id,
+                    message=f'You were assigned to "{reminder.title}" by {assigner_user.name}',
+                    creator_email=assigner_user.email,
+                    scheduled_time=scheduled_time if notify else None,
+                )
+                notification_service = NotificationService(repos=self.repos)
+                if notify and scheduled_time is not None:
+                    await notification_service.create_scheduled_notification(notification)
+                else:
+                    # Always persist so it shows in the bell
+                    created_notif = await self.repos.notification_pgsql_repo.insert(notification)
+                    if notify:
                         pending_sends.append(
                             (assignee_user, created_notif, created_assignment.id, notification_service)
                         )

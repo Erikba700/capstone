@@ -166,7 +166,9 @@ async def add_assignee(
         user_id=schema.user_id,
         assigned_by=user.id,
     )
-    return await repos.reminder_assignee_pgsql_repo.insert(entity=entity)
+    result = await repos.reminder_assignee_pgsql_repo.insert(entity=entity)
+    await _notify_assignee(repos, reminder_id=reminder_id, assignee_id=schema.user_id, assigner=user)
+    return result
 
 
 @router.post(
@@ -367,6 +369,36 @@ async def _stamp_is_read_at(
         if notif.user_id == user_id and notif.is_read_at is None:
             updated = notif.update({'is_read_at': now})
             await repos.notification_pgsql_repo.update(entity=updated)
+
+
+async def _notify_assignee(
+    repos: RepoFactory,
+    reminder_id: uuid.UUID,
+    assignee_id: uuid.UUID,
+    assigner: UserEntity,
+) -> None:
+    """Create an in-app notification (and send email) to the new assignee."""
+    reminder = await repos.reminder_pgsql_repo.find_by_id(reminder_id=reminder_id)
+    assignee = await repos.user_pgsql_repo.find_by_id(assignee_id)
+    if reminder is None or assignee is None:
+        return
+
+    msg = f'{assigner.name} assigned you a reminder: "{reminder.title}"'
+    notification = NotificationEntity.create_new(
+        user_id=assignee_id,
+        reminder_id=reminder_id,
+        message=msg,
+        creator_email=assigner.email,
+    )
+    notification_service = NotificationService(repos=repos)
+    created = await repos.notification_pgsql_repo.insert(notification)
+    success = await notification_service.send_custom_notification(
+        recipient=assignee.email,
+        subject=f'New reminder assigned to you: {reminder.title}',
+        message=f'Hi {assignee.name},\n\n{msg}\n\n— Remindly',
+    )
+    if success:
+        await notification_service.mark_notification_as_sent(created)
 
 
 async def _notify_assigner(

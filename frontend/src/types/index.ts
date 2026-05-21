@@ -72,12 +72,15 @@ export interface Reminder {
   updated_by_name?: string | null;
 }
 
-export interface Notification {
+export interface AppNotification {
   id: string;
-  message: string;
+  reminder_id: string;
+  message: string | null;
+  creator_email: string | null;
+  scheduled_time: string | null;
+  sent_at: string | null;
   is_read_at: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface LoginRequest {
