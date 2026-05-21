@@ -275,7 +275,8 @@ class GroupReminderService:
         notification_service = NotificationService(repos=self.repos)
         created = await self.repos.notification_pgsql_repo.insert(notification)
         if scheduled_time is not None:
-            await notification_service.create_scheduled_notification(created)
+            # Notification already persisted above; no second insert needed.
+            # The Celery beat job will pick it up by scheduled_time.
             logger.info('Scheduled group notification', user_id=user.id, reminder_id=reminder.id, at=scheduled_time)
         else:
             if assignment_id is not None:
