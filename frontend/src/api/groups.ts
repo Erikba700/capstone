@@ -132,6 +132,11 @@ export const groupsApi = {
     return res.data;
   },
 
+  /** Remove a specific user from a group reminder's assignees */
+  removeGroupAssignee: async (reminderId: string, targetUserId: string): Promise<void> => {
+    await apiClient.delete(`/reminders/${reminderId}/assignees/user/${targetUserId}`);
+  },
+
   /** Any group member self-assigns (Assign to me) */
   assignToMe: async (reminderId: string, data: GroupNotifyRequest = {}): Promise<Reminder> => {
     const res = await apiClient.post<Reminder>(`/reminders/${reminderId}/assign-to-me`, data);

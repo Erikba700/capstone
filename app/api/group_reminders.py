@@ -205,3 +205,38 @@ async def update_group_reminder(
 
     service = ReminderService(repos=repos)
     return await service.enrich_reminder_with_notification_info(updated)
+
+
+@router.delete(
+    '/reminders/{reminder_id}/assignees/user/{target_user_id}',
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a specific user from a group reminder's assignees (admin/owner)",
+)
+async def remove_group_assignee(
+    reminder_id: uuid.UUID,
+    target_user_id: uuid.UUID,
+    user: Annotated[UserEntity, Depends(get_current_user)],
+    repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
+) -> None:
+    """Remove a specific user from a group reminder's assignee list."""
+    from app.exceptions import NotFoundError
+
+    reminder = await _get_reminder_or_404(reminder_id, repos)
+    group_service = GroupReminderService(repos=repos)
+    group_id = await group_service.ensure_group_reminder(reminder)
+    membership = await group_service.ensure_group_member(group_id=group_id, user_id=user.id)
+    if membership.role not in (MemberRoles.ADMIN, MemberRoles.OWNER):
+        from app.exceptions import AuthorizationError
+
+        msg = 'Only admins and owners can remove assignees'
+        raise AuthorizationError(msg)
+
+    assignment = await repos.reminder_assignee_pgsql_repo.find_by_reminder_and_user(
+        reminder_id=reminder_id,
+        user_id=target_user_id,
+    )
+    if assignment is None:
+        msg = 'Assignment not found'
+        raise NotFoundError(msg)
+
+    await repos.reminder_assignee_pgsql_repo.delete_by_id(assignee_id=assignment.id)

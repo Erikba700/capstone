@@ -80,7 +80,7 @@ async def mark_notification_read(
     }
 
 
-@router.patch('/notifications/read-all', response_model=dict)
+@router.patch('/notifications/read-all')
 async def mark_all_notifications_read(
     user: Annotated[UserEntity, Depends(get_current_user)],
     repos: Annotated[RepoFactory, Depends(get_shared_tx_repo)],
@@ -100,4 +100,3 @@ async def mark_all_notifications_read(
             count += 1
 
     return {'marked_read': count}
-

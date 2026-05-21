@@ -1,9 +1,9 @@
 import { useState, type FormEvent, useEffect } from 'react';
-import type { Reminder, ReminderStatus, Group, Friendship } from '../types';
+import type { Reminder, ReminderStatus } from '../types';
+import type { Friendship as Friend } from '../types';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useAuthStore } from '../context/store';
 import { formatDateTimeWithTimezone, getMinDateTimeInTimezone } from '../utils/timezone';
-import { groupsApi } from '../api/groups';
 import { friendsApi } from '../api/friends';
 
 interface ReminderModalProps {
@@ -40,9 +40,7 @@ export default function ReminderModal({
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [notifyUser, setNotifyUser] = useState(false);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [groupId, setGroupId] = useState<string>('');
-  const [friends, setFriends] = useState<Friendship[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [notifyAssignees, setNotifyAssignees] = useState(false);
   const [assigneeScheduledDate, setAssigneeScheduledDate] = useState('');
@@ -55,7 +53,6 @@ export default function ReminderModal({
 
   useEffect(() => {
     if (isOpen) {
-      groupsApi.listGroups().then(setGroups).catch(() => {});
       friendsApi.listFriends().then(setFriends).catch(() => {});
     }
   }, [isOpen]);
@@ -65,7 +62,6 @@ export default function ReminderModal({
       setTitle(reminder.title);
       setDescription(reminder.description || '');
       setStatus(reminder.status || 'pending');
-      setGroupId(reminder.group_id || '');
       setSelectedAssignees(reminder.assignees || []);
     } else {
       setTitle('');
@@ -75,7 +71,6 @@ export default function ReminderModal({
       setScheduledDate('');
       setScheduledTime('');
       setNotifyUser(false);
-      setGroupId('');
       setSelectedAssignees([]);
       setNotifyAssignees(false);
       setAssigneeScheduledDate('');
@@ -108,7 +103,7 @@ export default function ReminderModal({
         title,
         description: description || undefined,
         status,
-        group_id: groupId || null,
+        group_id: null,
       };
 
       if (reminder || selectedAssignees.length > 0) {
@@ -163,7 +158,6 @@ export default function ReminderModal({
       setScheduledDate('');
       setScheduledTime('');
       setNotifyUser(false);
-      setGroupId('');
       setSelectedAssignees([]);
       setNotifyAssignees(false);
       setAssigneeScheduledDate('');
@@ -184,7 +178,6 @@ export default function ReminderModal({
     setScheduledDate('');
     setScheduledTime('');
     setNotifyUser(false);
-    setGroupId('');
     setSelectedAssignees([]);
     setNotifyAssignees(false);
     setAssigneeScheduledDate('');
@@ -269,30 +262,6 @@ export default function ReminderModal({
             </select>
           </div>
 
-          {groups.length > 0 && !isAssigneeEdit && (
-            <div className="mb-4">
-              <label
-                htmlFor="group"
-                className="block text-sm font-medium mb-2"
-                style={{ color: isDarkMode ? '#d1d5db' : '#374151' }}
-              >
-                Group (optional)
-              </label>
-              <select
-                id="group"
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                className="input-field"
-              >
-                <option value="">No group</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Friend Assignees */}
           {friends.length > 0 && !isAssigneeEdit && (

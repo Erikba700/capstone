@@ -118,34 +118,21 @@ class GroupReminderService:
         notify_previous: bool = False,
         scheduled_time: dt | None = None,
     ) -> ReminderAssigneeEntity:
-        """Assign a group member to a reminder.
+        """Add a group member as an assignee to a reminder (multi-assignee).
 
-        Validates group membership for both target and actor.
-        Optionally notifies the new and previous assignees.
+        Does NOT remove existing assignees — call remove_assignee separately.
+        If the user is already assigned, returns the existing assignment.
         """
         group_id = await self.ensure_group_reminder(reminder)
         await self.ensure_group_assignment_allowed(group_id=group_id, assignee_id=assignee_id)
 
-        # Remove existing assignment for this user if present (reassignment)
+        # Avoid duplicate — return existing if already assigned
         existing = await self.repos.reminder_assignee_pgsql_repo.find_by_reminder_and_user(
             reminder_id=reminder.id,
             user_id=assignee_id,
         )
-
-        if notify_previous and existing is not None:
-            # Notify the previous assignee that the task was taken over
-            previous_user = await self.repos.user_pgsql_repo.find_by_id(existing.user_id)
-            assigner_user = await self.repos.user_pgsql_repo.find_by_id(assigned_by)
-            if previous_user is not None and assigner_user is not None:
-                await self._send_notification(
-                    user=previous_user,
-                    reminder=reminder,
-                    message=f'{assigner_user.name} reassigned "{reminder.title}" (previously yours)',
-                    creator_email=assigner_user.email,
-                )
-
         if existing is not None:
-            await self.repos.reminder_assignee_pgsql_repo.delete_by_id(assignee_id=existing.id)
+            return existing
 
         entity = ReminderAssigneeEntity.create_new(
             reminder_id=reminder.id,
@@ -178,37 +165,17 @@ class GroupReminderService:
         notify_previous: bool = False,
         scheduled_time: dt | None = None,
     ) -> ReminderAssigneeEntity:
-        """Allow a group member to self-assign a reminder (Jira "Assign to me").
-
-        Optionally notifies the previous assignee that this user took the task.
-        """
+        """Add the current user as an assignee (multi-assignee — does not remove others)."""
         group_id = await self.ensure_group_reminder(reminder)
         await self.ensure_group_member(group_id=group_id, user_id=user.id)
 
-        # Find any existing assignee for this reminder (first one for notification)
-        existing_assignments = await self.repos.reminder_assignee_pgsql_repo.list_by_reminder_id(
-            reminder_id=reminder.id,
-        )
-
-        if notify_previous and existing_assignments:
-            for ea in existing_assignments:
-                if ea.user_id != user.id:
-                    prev_user = await self.repos.user_pgsql_repo.find_by_id(ea.user_id)
-                    if prev_user is not None:
-                        await self._send_notification(
-                            user=prev_user,
-                            reminder=reminder,
-                            message=f'{user.name} self-assigned "{reminder.title}" (was assigned to you)',
-                            creator_email=user.email,
-                        )
-
-        # Remove existing self-assignment if exists
-        self_existing = await self.repos.reminder_assignee_pgsql_repo.find_by_reminder_and_user(
+        # Return existing if already assigned
+        existing = await self.repos.reminder_assignee_pgsql_repo.find_by_reminder_and_user(
             reminder_id=reminder.id,
             user_id=user.id,
         )
-        if self_existing is not None:
-            await self.repos.reminder_assignee_pgsql_repo.delete_by_id(assignee_id=self_existing.id)
+        if existing is not None:
+            return existing
 
         entity = ReminderAssigneeEntity.create_new(
             reminder_id=reminder.id,

@@ -82,6 +82,13 @@ async def _send_scheduled_notifications_async() -> dict:
 
                 # Fetch user and reminder details
                 user = await repos.user_pgsql_repo.find_by_id(notification.user_id)
+
+                if notification.reminder_id is None:
+                    logger.info(f'Skipping scheduled send for social notification {notification.id} (no reminder_id)')
+                    await notification_service.mark_notification_as_sent(notification)
+                    sent_count += 1
+                    continue
+
                 reminder = await repos.reminder_pgsql_repo.find_by_id(notification.reminder_id)
 
                 if user is None:

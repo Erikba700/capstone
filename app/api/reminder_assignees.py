@@ -167,7 +167,9 @@ async def add_assignee(
         assigned_by=user.id,
     )
     result = await repos.reminder_assignee_pgsql_repo.insert(entity=entity)
-    await _notify_assignee(repos, reminder_id=reminder_id, assignee_id=schema.user_id, assigner=user)
+    await _notify_assignee(
+        repos, reminder_id=reminder_id, assignee_id=schema.user_id, assigner=user, assignment_id=result.id
+    )
     return result
 
 
@@ -376,8 +378,9 @@ async def _notify_assignee(
     reminder_id: uuid.UUID,
     assignee_id: uuid.UUID,
     assigner: UserEntity,
+    assignment_id: uuid.UUID | None = None,
 ) -> None:
-    """Create an in-app notification (and send email) to the new assignee."""
+    """Create an in-app notification (and send email with action buttons) to the new assignee."""
     reminder = await repos.reminder_pgsql_repo.find_by_id(reminder_id=reminder_id)
     assignee = await repos.user_pgsql_repo.find_by_id(assignee_id)
     if reminder is None or assignee is None:
@@ -392,11 +395,20 @@ async def _notify_assignee(
     )
     notification_service = NotificationService(repos=repos)
     created = await repos.notification_pgsql_repo.insert(notification)
-    success = await notification_service.send_custom_notification(
-        recipient=assignee.email,
-        subject=f'New reminder assigned to you: {reminder.title}',
-        message=f'Hi {assignee.name},\n\n{msg}\n\n— Remindly',
-    )
+
+    if assignment_id is not None:
+        success = await notification_service.send_reminder_notification_with_actions(
+            user=assignee,
+            reminder=reminder,
+            notification=created,
+            assignment_id=assignment_id,
+        )
+    else:
+        success = await notification_service.send_custom_notification(
+            recipient=assignee.email,
+            subject=f'New reminder assigned to you: {reminder.title}',
+            message=f'Hi {assignee.name},\n\n{msg}\n\n— Remindly',
+        )
     if success:
         await notification_service.mark_notification_as_sent(created)
 

@@ -128,16 +128,17 @@ export default function ReminderCallback() {
 
     // error
     const reasonMessages: Record<string, string> = {
-      invalid_token: 'The link is invalid or has expired. Links are valid for 7 days.',
-      malformed_token: 'The link appears to be malformed.',
+      invalid_token: 'This link has expired or is no longer valid. Email links are valid for 7 days. Please ask the reminder owner to resend the notification.',
+      malformed_token: 'The link appears to be malformed. Please try clicking the original link again.',
       not_found: 'The reminder assignment was not found, or this link belongs to a different account.',
       unknown_action: 'Unknown action in link.',
     };
+    const isExpired = reason === 'invalid_token' || reason === 'malformed_token';
     return (
       <div className="text-center space-y-4">
-        <div className="text-5xl">❌</div>
-        <h2 className="text-xl font-bold" style={{ color: '#dc2626' }}>
-          Something went wrong
+        <div className="text-5xl">{isExpired ? '⏰' : '❌'}</div>
+        <h2 className="text-xl font-bold" style={{ color: isExpired ? '#d97706' : '#dc2626' }}>
+          {isExpired ? 'Link Expired' : 'Something went wrong'}
         </h2>
         <p style={{ color: subText }}>
           {reasonMessages[reason] ?? 'An unexpected error occurred.'}

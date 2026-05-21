@@ -209,7 +209,7 @@ function GroupReminderCard({
 
   const [statusSaving, setStatusSaving] = useState(false);
   const [reassigning, setReassigning] = useState(false);
-  const [selectedReassign, setSelectedReassign] = useState('');
+  const [selectedReassigns, setSelectedReassigns] = useState<string[]>([]);
   const [notifyPrevious, setNotifyPrevious] = useState(false);
   const [notifyMsg, setNotifyMsg] = useState('');
   const [showNotify, setShowNotify] = useState(false);
@@ -250,18 +250,28 @@ function GroupReminderCard({
   };
 
   const handleReassign = async () => {
-    if (!selectedReassign) return;
+    if (selectedReassigns.length === 0) return;
     try {
-      await groupsApi.assignMember(reminder.id, {
-        user_id: selectedReassign,
-        notify: true,
-        notify_previous: notifyPrevious,
-        scheduled_time: assignScheduled ? new Date(assignScheduled).toISOString() : undefined,
-      });
-      toast.success(assignScheduled ? 'Reassigned — notification scheduled!' : 'Reassigned!');
-      setReassigning(false); setSelectedReassign(''); setNotifyPrevious(false); setAssignScheduled('');
+      for (const userId of selectedReassigns) {
+        await groupsApi.assignMember(reminder.id, {
+          user_id: userId,
+          notify: true,
+          notify_previous: notifyPrevious,
+          scheduled_time: assignScheduled ? new Date(assignScheduled).toISOString() : undefined,
+        });
+      }
+      toast.success(assignScheduled ? 'Assigned — notification scheduled!' : `Assigned ${selectedReassigns.length} member(s)!`);
+      setReassigning(false); setSelectedReassigns([]); setNotifyPrevious(false); setAssignScheduled('');
       onRefresh();
     } catch { toast.error('Failed to reassign'); }
+  };
+
+  const handleRemoveAssignee = async (assigneeUserId: string) => {
+    try {
+      await groupsApi.removeGroupAssignee(reminder.id, assigneeUserId);
+      toast.success('Assignee removed');
+      onRefresh();
+    } catch { toast.error('Failed to remove assignee'); }
   };
 
   const handleNotifyAssignees = async () => {
@@ -358,7 +368,7 @@ function GroupReminderCard({
           {reminder.assignee_details.map(a => (
             <span
               key={a.id}
-              className="text-xs px-2 py-0.5 rounded-full"
+              className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
               title={a.completed_at ? 'Completed' : 'Assigned'}
               style={{
                 backgroundColor: a.user_id === myUserId ? (isDarkMode ? '#1e3a5f' : '#dbeafe') : (isDarkMode ? '#374151' : '#f3f4f6'),
@@ -366,6 +376,15 @@ function GroupReminderCard({
               }}
             >
               {a.user_name ?? a.user_email ?? a.user_id.slice(0, 8)}{a.completed_at && ' ✓'}
+              {isAdminOrOwner && (
+                <button
+                  onClick={() => handleRemoveAssignee(a.user_id)}
+                  title="Remove assignee"
+                  style={{ marginLeft: 2, background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontWeight: 700, lineHeight: 1, padding: 0, fontSize: 11 }}
+                >
+                  ✕
+                </button>
+              )}
             </span>
           ))}
         </div>
@@ -407,7 +426,7 @@ function GroupReminderCard({
             {(reminder.assignee_details?.length ?? 0) > 0 && (
               <label className="flex items-center gap-1 text-xs cursor-pointer" style={{ color: subText }}>
                 <input type="checkbox" checked={notifyPrevious} onChange={e => setNotifyPrevious(e.target.checked)} className="w-3 h-3" />
-                notify previous assignee
+                notify previous assignees
               </label>
             )}
             {notifyPrevious && (
@@ -428,7 +447,7 @@ function GroupReminderCard({
             className="text-xs px-2 py-1 rounded font-medium"
             style={{ backgroundColor: isDarkMode ? '#374151' : '#f3f4f6', color: textColor }}
           >
-            ↔ Reassign
+            ➕ Add Assignees
           </button>
         )}
         {(isCreator || isAdminOrOwner) && !showNotify && (
@@ -457,24 +476,30 @@ function GroupReminderCard({
       {/* Reassign panel */}
       {reassigning && (
         <div className="rounded p-3 space-y-2" style={{ backgroundColor: inputBg, border: `1px solid ${borderColor}` }}>
-          <p className="text-xs font-medium" style={{ color: textColor }}>Reassign to:</p>
-          <select
-            value={selectedReassign}
-            onChange={e => setSelectedReassign(e.target.value)}
-            className="w-full text-xs px-2 py-1.5 rounded border"
-            style={{ backgroundColor: isDarkMode ? '#1f2937' : '#fff', color: textColor, borderColor }}
-          >
-            <option value="">— pick a member —</option>
-            {members.map(m => (
-              <option key={m.id} value={m.user_id}>{m.user_name} ({ROLE_LABELS[m.role]})</option>
+          <p className="text-xs font-medium" style={{ color: textColor }}>Add assignees:</p>
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {members.filter(m => !reminder.assignee_details?.some(a => a.user_id === m.user_id)).map(m => (
+              <label key={m.id} className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: textColor }}>
+                <input
+                  type="checkbox"
+                  checked={selectedReassigns.includes(m.user_id)}
+                  onChange={e => setSelectedReassigns(prev =>
+                    e.target.checked ? [...prev, m.user_id] : prev.filter(id => id !== m.user_id)
+                  )}
+                  className="w-3 h-3"
+                />
+                {m.user_name} <span style={{ color: subText }}>({ROLE_LABELS[m.role]})</span>
+              </label>
             ))}
-          </select>
+            {members.every(m => reminder.assignee_details?.some(a => a.user_id === m.user_id)) && (
+              <p className="text-xs" style={{ color: subText }}>All members are already assigned.</p>
+            )}
+          </div>
           <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: subText }}>
             <input type="checkbox" checked={notifyPrevious} onChange={e => setNotifyPrevious(e.target.checked)} className="w-3 h-3" />
-            Notify previous assignee
+            Notify assignees via email
           </label>
-          <div className="space-y-1">
-            <p className="text-xs" style={{ color: subText }}>Schedule notification for new assignee (optional):</p>
+          {notifyPrevious && (
             <input
               type="datetime-local"
               value={assignScheduled}
@@ -483,18 +508,18 @@ function GroupReminderCard({
               style={{ backgroundColor: isDarkMode ? '#1f2937' : '#fff', color: textColor, borderColor }}
               placeholder="Leave empty to notify immediately"
             />
-          </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={handleReassign}
-              disabled={!selectedReassign}
+              disabled={selectedReassigns.length === 0}
               className="text-xs px-3 py-1 rounded font-medium text-white"
-              style={{ backgroundColor: '#0284c7', opacity: !selectedReassign ? 0.5 : 1 }}
+              style={{ backgroundColor: '#0284c7', opacity: selectedReassigns.length === 0 ? 0.5 : 1 }}
             >
-              Assign
+              Add ({selectedReassigns.length})
             </button>
             <button
-              onClick={() => { setReassigning(false); setSelectedReassign(''); }}
+              onClick={() => { setReassigning(false); setSelectedReassigns([]); }}
               className="text-xs px-3 py-1 rounded"
               style={{ backgroundColor: isDarkMode ? '#4b5563' : '#e5e7eb', color: textColor }}
             >
