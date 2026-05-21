@@ -11,7 +11,7 @@ class NotificationEntity(DomainEntity):
     """Notification domain entity."""
 
     user_id: uuid.UUID
-    reminder_id: uuid.UUID
+    reminder_id: uuid.UUID | None
     message: str | None
     creator_email: str | None
     scheduled_time: AwareDatetime | None
@@ -22,7 +22,7 @@ class NotificationEntity(DomainEntity):
     def create_new(
         cls,
         user_id: uuid.UUID,
-        reminder_id: uuid.UUID,
+        reminder_id: uuid.UUID | None = None,
         message: str | None = None,
         creator_email: str | None = None,
         scheduled_time: AwareDatetime | None = None,

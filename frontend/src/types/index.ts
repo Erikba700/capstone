@@ -74,7 +74,7 @@ export interface Reminder {
 
 export interface AppNotification {
   id: string;
-  reminder_id: string;
+  reminder_id: string | null;
   message: string | null;
   creator_email: string | null;
   scheduled_time: string | null;

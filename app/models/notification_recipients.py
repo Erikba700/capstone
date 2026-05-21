@@ -12,7 +12,7 @@ class NotificationRecipients(DomainSqlModel):
 
     __tablename__ = 'notification_recipients'
 
-    reminder_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey('reminders.id', ondelete='CASCADE'))
+    reminder_id: Mapped[uuid.UUID | None] = mapped_column(sa.ForeignKey('reminders.id', ondelete='CASCADE'), nullable=True)
     user_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey('users.id', ondelete='CASCADE'))
 
     message: Mapped[str] = mapped_column(sa.String, nullable=True)

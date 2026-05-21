@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 
 from app.dependencies import get_current_user, get_repo, get_shared_tx_repo
-from app.entities import UserEntity
+from app.entities import NotificationEntity, UserEntity
 from app.repos import RepoFactory
 from app.schemas.friendship_schemas import (
     FriendshipCreateRequestSchema,
@@ -14,6 +14,7 @@ from app.schemas.friendship_schemas import (
     UserSearchResponseSchema,
 )
 from app.services.friendship_service import FriendshipService
+from app.services.notifications_service import NotificationService
 
 router = APIRouter(tags=['Friends'])
 
@@ -63,6 +64,13 @@ async def send_friend_request(
         requester_id=user.id,
         addressee_id=schema.addressee_id,
     )
+    # Notify the addressee
+    await _notify(
+        repos=repos,
+        user_id=schema.addressee_id,
+        message=f'{user.name} sent you a friend request',
+        sender_email=user.email,
+    )
     return await service.enrich_with_other_user(friendship, user.id)
 
 
@@ -105,7 +113,50 @@ async def respond_to_request(
         current_user_id=user.id,
         new_status=schema.status,
     )
+    # Notify the original requester when accepted or rejected
+    if schema.status == 'accepted':
+        await _notify(
+            repos=repos,
+            user_id=friendship.requester_id,
+            message=f'{user.name} accepted your friend request',
+            sender_email=user.email,
+        )
+    elif schema.status == 'rejected':
+        await _notify(
+            repos=repos,
+            user_id=friendship.requester_id,
+            message=f'{user.name} declined your friend request',
+            sender_email=user.email,
+        )
     return await service.enrich_with_other_user(friendship, user.id)
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+async def _notify(
+    repos: RepoFactory,
+    user_id: uuid.UUID,
+    message: str,
+    sender_email: str,
+) -> None:
+    """Persist an in-app notification (no reminder required)."""
+    notification = NotificationEntity.create_new(
+        user_id=user_id,
+        message=message,
+        creator_email=sender_email,
+    )
+    notification_service = NotificationService(repos=repos)
+    created = await repos.notification_pgsql_repo.insert(notification)
+    addressee = await repos.user_pgsql_repo.find_by_id(user_id)
+    if addressee:
+        success = await notification_service.send_custom_notification(
+            recipient=addressee.email,
+            subject=message,
+            message=message,
+        )
+        if success:
+            await notification_service.mark_notification_as_sent(created)
 
 
 @router.delete('/friends/requests/{friendship_id}', status_code=status.HTTP_204_NO_CONTENT)

@@ -16,7 +16,7 @@ class NotificationResponseSchema(BaseSchema):
     """Schema for a single notification history item."""
 
     id: uuid.UUID
-    reminder_id: uuid.UUID
+    reminder_id: uuid.UUID | None
     message: str | None
     creator_email: str | None
     scheduled_time: str | None
