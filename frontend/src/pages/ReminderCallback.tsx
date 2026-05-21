@@ -7,11 +7,29 @@ type CallbackStatus = 'loading' | 'success' | 'already_done' | 'error';
 const ACTION_LABELS: Record<string, string> = {
   acknowledge: "I've Seen This Reminder",
   complete: 'Mark As Completed',
+  takeover_accept: 'Accept Takeover',
+  takeover_reject: 'Reject Takeover',
 };
 
 const ACTION_PAST: Record<string, string> = {
   acknowledge: 'acknowledged',
   complete: 'completed',
+  takeover_accept: 'accepted',
+  takeover_reject: 'rejected',
+};
+
+const ACTION_EMOJI: Record<string, string> = {
+  acknowledge: '👁️',
+  complete: '✅',
+  takeover_accept: '🔄',
+  takeover_reject: '🚫',
+};
+
+const ACTION_DESC: Record<string, string> = {
+  acknowledge: "The reminder owner has been notified that you've seen it.",
+  complete: 'The reminder owner has been notified of your completion. Great work!',
+  takeover_accept: 'The requester has been notified and is now assigned to this reminder.',
+  takeover_reject: 'The requester has been notified that you kept the assignment.',
 };
 
 export default function ReminderCallback() {
@@ -58,17 +76,17 @@ export default function ReminderCallback() {
 
     if (status === 'success') {
       const verb = ACTION_PAST[action] ?? action;
+      const emoji = ACTION_EMOJI[action] ?? '✅';
+      const desc = ACTION_DESC[action] ?? 'Action completed successfully.';
       return (
         <div className="text-center space-y-4">
-          <div className="text-5xl">{action === 'complete' ? '✅' : '👁️'}</div>
+          <div className="text-5xl">{emoji}</div>
           <h2 className="text-xl font-bold" style={{ color: textColor }}>
-            Reminder {verb}!
+            {action.startsWith('takeover')
+              ? `Takeover ${verb}!`
+              : `Reminder ${verb}!`}
           </h2>
-          <p style={{ color: subText }}>
-            {action === 'acknowledge'
-              ? "The reminder owner has been notified that you've seen it."
-              : 'The reminder owner has been notified of your completion. Great work!'}
-          </p>
+          <p style={{ color: subText }}>{desc}</p>
           <p className="text-sm" style={{ color: subText }}>
             Redirecting to dashboard in {countdown}s…
           </p>
